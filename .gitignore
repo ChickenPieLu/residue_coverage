@@ -3,7 +3,9 @@ __pycache__/
 *.pyc
 .env
 .DS_Store
+/residue_background
 
 *.png
 *.jpg
 *.jpeg
+*.tif
