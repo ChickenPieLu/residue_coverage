@@ -1,7 +1,6 @@
 import numpy as np
 import tifffile
 from training import read_paths
-import matplotlib.pyplot as plt
 
 
 raw_dir = "residue_background/Limbaugh1-1m20220328/raw/"

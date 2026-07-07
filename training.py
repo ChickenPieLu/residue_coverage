@@ -38,7 +38,7 @@ def valid_masks(mask_paths):
     return True
 
 # 红色mask
-def masked_img(mask):
+def coloured_mask(mask):
     empty = np.full(mask.shape, 0)
     mask1 = np.where(mask>0,120,0)
     coloured_mask = np.stack([mask1,empty,empty],axis = -1)
@@ -51,9 +51,35 @@ def show_plt(img):
     plt.axis("off")
     plt.show()
 
+# 每个像素的特征值
+def make_features(img_rgb):
+    h, w, _ = img_rgb.shape
+    img_hsv = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2HSV)
+
+    rgb = img_rgb.astype(np.float32)/ 255.0
+
+    hsv = img_hsv.astype(np.float32)
+    hsv[:,:,0] /= 179.0
+    hsv[:,:,1] /= 255.0
+    hsv[:,:,1] /= 255.0
+
+    yy,xx = np.meshgrid(
+        np.linspace(0,1,h),
+        np.linspace(0,1,w),
+        indexing = "ij"
+    )
+    xy = np.stack([xx,yy],axis = -1).astype(np.float32)
+
+    features = np.concatenate([rgb,hsv,xy],axis = -1)
+    return features.reshape(-1, features.shape[-1])
+
+
 raw_dir = "residue_background/Limbaugh1-1m20220328/raw/"
 mask_dir = "residue_background/Limbaugh1-1m20220328/mask/"
 raw_paths, mask_paths = read_paths(raw_dir,mask_dir)
 
-img_num = 100
-show_plt(np.clip((masked_img(tiff_read(mask_paths[img_num]))+jpg_read(raw_paths[img_num])),0,255))
+img_num = 0
+#show_plt(np.clip((coloured_mask(tiff_read(mask_paths[img_num]))+jpg_read(raw_paths[img_num])),0,255))
+temp = make_features(jpg_read(raw_paths[img_num]))
+print(temp.shape)
+print(temp[0,:])
