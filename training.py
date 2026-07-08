@@ -4,15 +4,17 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 from natsort import natsorted
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
 
 # 路径读取
 def read_paths(raw_dir,mask_dir):
     raw_paths = [
-        (raw_dir + f)for f in os.listdir(raw_dir)
+        os.path.join(raw_dir, f)for f in os.listdir(raw_dir)
         if f.lower().endswith(".jpg")
     ]
     mask_paths = [
-        (mask_dir + f) for f in os.listdir(mask_dir)
+        os.path.join(mask_dir, f) for f in os.listdir(mask_dir)
         if f.lower().endswith(".tif")
     ]
     raw_paths, mask_paths = natsorted(raw_paths),natsorted(mask_paths) # 保证顺序
@@ -29,7 +31,7 @@ def jpg_read(path):
 
 # 红色mask
 def coloured_mask(mask):
-    empty = np.full(mask.shape, 0)
+    empty = np.full(mask.shape, 0).astype(np.uint8)
     coloured_mask = np.stack([mask*120,empty,empty],axis = -1)
     return coloured_mask # (h,w,c) 0-255
 
@@ -62,7 +64,7 @@ def make_features(img_rgb):
     features = np.concatenate([rgb,hsv,xy],axis = -1)
     return features.reshape(-1, features.shape[-1])
 
-# 像素抽样(8000max)
+# 像素抽样(默认8000max)
 def sample_pixels(img_path,mask_path,max_pixel=8000):
     img = jpg_read(img_path)
     mask = tiff_read(mask_path)
@@ -72,19 +74,53 @@ def sample_pixels(img_path,mask_path,max_pixel=8000):
 
     features = make_features(img)
     labels = mask.reshape(-1).astype(np.uint8)
-    
-    total_pixels = len(labels)
-    if total_pixels > max_pixel:
-        chosen = np.random.choice(total_pixels,size=max_pixel,replace=False)
-    else:
-        chosen = np.arange(total_pixels)
+
+    true_i = np.nonzero(labels)[0]
+    false_i = np.nonzero(labels == 0)[0]
+
+    lim = int(max_pixel/2)
+    if len(true_i) > lim:
+        true_chosen = np.random.choice(true_i, size=lim, replace=False)
+    else: true_chosen = true_i
+    if len(false_i) > lim:
+        false_chosen = np.random.choice(false_i, size = lim, replace=False)
+    else: false_chosen = false_i
+
+    chosen = np.concatenate([true_chosen,false_chosen])
     
     return features[chosen],labels[chosen]
 
-img_dir = "residue_background/Limbaugh1-1m20220328/raw/"
-mask_dir = "residue_background/Limbaugh1-1m20220328/mask/"
-img_paths, mask_paths = read_paths(img_dir,mask_dir)
+# 核心训练部分
+def main():
+    seed = 114514
+    np.random.seed(seed)
+    img_dir = "residue_background/Limbaugh1-1m20220328/raw/"
+    mask_dir = "residue_background/Limbaugh1-1m20220328/mask/"
+    img_paths, mask_paths = read_paths(img_dir,mask_dir)
 
-x = 100
-#show_plt(np.clip((coloured_mask(tiff_read(mask_paths[x]))+jpg_read(img_paths[x])),0,255))
-print(sample_pixels(img_paths[x],mask_paths[x])[0][0,:])
+    if len(img_paths) != len(mask_paths):
+        raise ValueError("图片和mask数量不匹配")
+    
+    train_img, test_img, train_mask, test_mask = train_test_split(img_paths,mask_paths,random_state=seed)
+    
+    train_features, train_labels = [],[]
+    test_features, test_labels = [],[]
+    for i in range(len(train_img)):
+        try:
+            features, labels = sample_pixels(train_img[i],train_mask[i])
+            train_features.append(features)
+            train_labels.append(labels)
+        except ValueError:
+            print(f"错误: {str(train_img[i])} 跳过该图片")
+            continue
+    for j in range(len(test_img)):
+        try:
+            features, labels = sample_pixels(test_img[j],test_mask[j])
+            test_features.append(features)
+            test_labels.append(labels)
+        except ValueError:
+            print(f"错误: {str(test_img[j])} 跳过该图片")
+            continue
+    
+    X_train, y_train = np.concatenate(train_features), np.concatenate(train_labels)
+    X_test, y_test = np.concatenate(test_features), np.concatenate(test_labels)
