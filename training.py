@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from natsort import natsorted
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
 
 # 路径读取
 def read_paths(raw_dir,mask_dir):
@@ -54,14 +55,14 @@ def make_features(img_rgb):
     hsv[:,:,1] /= 255.0
     hsv[:,:,2] /= 255.0
 
-    yy,xx = np.meshgrid(
-        np.linspace(0,1,h),
-        np.linspace(0,1,w),
-        indexing = "ij"
-    )
-    xy = np.stack([xx,yy],axis = -1).astype(np.float32)
+    # yy,xx = np.meshgrid(
+    #     np.linspace(0,1,h),
+    #     np.linspace(0,1,w),
+    #     indexing = "ij"
+    # )
+    # xy = np.stack([xx,yy],axis = -1).astype(np.float32)
 
-    features = np.concatenate([rgb,hsv,xy],axis = -1)
+    features = np.concatenate([rgb,hsv],axis = -1)
     return features.reshape(-1, features.shape[-1])
 
 # 像素抽样(默认8000max)
@@ -75,6 +76,7 @@ def sample_pixels(img_path,mask_path,max_pixel=8000):
     features = make_features(img)
     labels = mask.reshape(-1).astype(np.uint8)
 
+    # 分层抽样(一半 true, 一半 false)
     true_i = np.nonzero(labels)[0]
     false_i = np.nonzero(labels == 0)[0]
 
@@ -101,26 +103,52 @@ def main():
     if len(img_paths) != len(mask_paths):
         raise ValueError("图片和mask数量不匹配")
     
-    train_img, test_img, train_mask, test_mask = train_test_split(img_paths,mask_paths,random_state=seed)
+    # 分离训练和测试集
+    train_img_dir, test_img_dir, train_mask_dir, test_mask_dir = train_test_split(img_paths,mask_paths,random_state=seed)
     
     train_features, train_labels = [],[]
     test_features, test_labels = [],[]
-    for i in range(len(train_img)):
+    for i in range(len(train_img_dir)):
         try:
-            features, labels = sample_pixels(train_img[i],train_mask[i])
+            features, labels = sample_pixels(train_img_dir[i],train_mask_dir[i])
             train_features.append(features)
             train_labels.append(labels)
         except ValueError:
-            print(f"错误: {str(train_img[i])} 跳过该图片")
+            print(f"错误: {str(train_img_dir[i])} 跳过该图片")
             continue
-    for j in range(len(test_img)):
+    for j in range(len(test_img_dir)):
         try:
-            features, labels = sample_pixels(test_img[j],test_mask[j])
+            features, labels = sample_pixels(test_img_dir[j],test_mask_dir[j])
             test_features.append(features)
             test_labels.append(labels)
         except ValueError:
-            print(f"错误: {str(test_img[j])} 跳过该图片")
+            print(f"错误: {str(test_img_dir[j])} 跳过该图片")
             continue
-    
     X_train, y_train = np.concatenate(train_features), np.concatenate(train_labels)
     X_test, y_test = np.concatenate(test_features), np.concatenate(test_labels)
+
+    print("成功创建训练与测试集")
+
+    clf = RandomForestClassifier(
+        n_estimators=200,
+        max_depth=None,
+        class_weight='balanced',
+        random_state=seed,
+        n_jobs=-1
+    )
+
+    print("开始训练")
+    clf.fit(X_train, y_train)
+
+    print("训练成功，测试")
+
+    y_pred = clf.predict(X_test)
+    print(classification_report(y_test,y_pred))
+
+    img,mask = jpg_read(test_img_dir[0]),tiff_read(test_mask_dir[0])
+    pred = clf.predict(make_features(img))
+    pred_2d = pred.reshape(512,512)
+    result = np.stack([pred_2d*200,mask*200,np.zeros_like(pred_2d)],axis=-1)
+    show_plt(result)
+
+main()
