@@ -2,28 +2,25 @@ import cv2
 import numpy as np
 import joblib
 import utils
+import time
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 
-# 每个像素的特征值 [R,G,B,H,S,V,X,Y], 0.0-1.0
+# 每个像素的特征值 [R,G,B,H,S,V,n*n像素平均亮度], 0.0-1.0
 def make_features(img_rgb):
-    h, w, _ = img_rgb.shape
     img_hsv = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2HSV)
 
     rgb = img_rgb.astype(np.float32)/ 255.0
-
     hsv = img_hsv.astype(np.float32)
+    gray = hsv[:,:,-1].copy()
+
     hsv[:,:,0] /= 179.0
     hsv[:,:,1] /= 255.0
     hsv[:,:,2] /= 255.0
 
-    # yy,xx = np.meshgrid(
-    #     np.linspace(0,1,h),
-    #     np.linspace(0,1,w),
-    #     indexing = "ij"
-    # )
-    # xy = np.stack([xx,yy],axis = -1).astype(np.float32)
+    # local_mean = cv2.blur(gray,(5,5))[:,:,None]/255.0
+    # local_contrast = (gray - cv2.blur(gray,(5,5)))[:,:,None]/255.0
 
     features = np.concatenate([rgb,hsv],axis = -1)
     return features.reshape(-1, features.shape[-1])
@@ -59,8 +56,12 @@ def sample_pixels(img_path,mask_path,max_pixel=8000):
 def main():
     seed = 114514
     np.random.seed(seed)
-    dir = "residue_background/Ritzville2-SprWheat1m20220329/IMG_0782"
-    img_paths, mask_paths = utils.read_paths(dir,dir)
+    dirs = [
+        "residue_background/Limbaugh1-1m20220328",
+        "residue_background/Ritzville2-SprWheat1m20220329",
+        "residue_background/Ritzville3-WheatFallow1pass1m20220329"
+        ]
+    img_paths, mask_paths = utils.read_paths(dirs)
 
     if len(img_paths) != len(mask_paths):
         raise ValueError("图片和mask数量不匹配")
@@ -100,20 +101,17 @@ def main():
     )
 
     print("开始训练")
-    clf.fit(X_train, y_train)
 
-    print("训练成功，保存...")
+    start = time.perf_counter()
+    clf.fit(X_train, y_train)
+    end = time.perf_counter()
+
+    print(f"训练成功(时长{utils.time_convert(start,end)})，保存...")
     joblib.dump(clf, "residue_rf_model.joblib")
 
     print("训练结果：")
     y_pred = clf.predict(X_test)
     print(classification_report(y_test,y_pred))
 
-    img,mask = utils.jpg_read(test_img_dir[0]),utils.tiff_read(test_mask_dir[0])
-    pred = clf.predict(make_features(img))
-    pred_2d = pred.reshape(512,512)
-    result = np.stack([pred_2d*200,mask*200,np.zeros_like(pred_2d)],axis=-1)
-    result = np.concatenate([result,img],axis = 1)
-    utils.show_plt(result)
-
-#main()
+if __name__ == "__main__":
+    main()
