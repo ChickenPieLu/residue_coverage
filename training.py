@@ -1,8 +1,9 @@
 import cv2
 import numpy as np
 import joblib
-import utils
+import utils #utils.py
 import time
+import argparse
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
@@ -19,10 +20,16 @@ def make_features(img_rgb):
     hsv[:,:,1] /= 255.0
     hsv[:,:,2] /= 255.0
 
-    # local_mean = cv2.blur(gray,(5,5))[:,:,None]/255.0
-    # local_contrast = (gray - cv2.blur(gray,(5,5)))[:,:,None]/255.0
+    local_mean = cv2.blur(gray,(5,5))[:,:,None]/255.0
+    local_contrast = (gray - cv2.blur(gray,(5,5)))[:,:,None]/255.0
 
-    features = np.concatenate([rgb,hsv],axis = -1)
+    feature_list = []
+    if args.hsv: feature_list.append(hsv)
+    if args.rgb: feature_list.append(rgb)
+    if args.mean: feature_list.append(local_mean)
+    if args.contrast: feature_list.append(local_contrast)
+
+    features = np.concatenate(feature_list,axis = -1)
     return features.reshape(-1, features.shape[-1])
 
 # 像素抽样(默认8000max)
@@ -53,7 +60,7 @@ def sample_pixels(img_path,mask_path,max_pixel=8000):
     return features[chosen],labels[chosen]
 
 # 核心训练部分
-def main():
+def main(args):
     seed = 114514
     np.random.seed(seed)
     dirs = [
@@ -94,7 +101,7 @@ def main():
 
     clf = RandomForestClassifier(
         n_estimators=200,
-        max_depth=None,
+        max_depth=10,
         class_weight='balanced',
         random_state=seed,
         n_jobs=-1
@@ -106,12 +113,30 @@ def main():
     clf.fit(X_train, y_train)
     end = time.perf_counter()
 
-    print(f"训练成功(时长{utils.time_convert(start,end)})，保存...")
+    print(f"训练完成 (时长 {utils.time_convert(start,end)} )，保存...")
     joblib.dump(clf, "residue_rf_model.joblib")
 
     print("训练结果：")
     y_pred = clf.predict(X_test)
     print(classification_report(y_test,y_pred))
 
+    ref_img = utils.jpg_read(test_img_dir[0]).astype(np.uint8)
+    ref_mask = utils.tiff_read(test_mask_dir[0]).astype(np.uint8)
+    ref_pred = clf.predict(make_features(ref_img)).reshape(512,512)
+    black = np.zeros_like(ref_pred)
+    top_right = np.stack([ref_pred*200,ref_mask*200,black],axis=-1)
+    bot_right = np.stack([ref_pred*200,black,black],axis=-1)
+    bot_left = np.stack([black,ref_mask*200,black],axis=-1)
+    row_1 = np.concatenate([ref_img,top_right],axis=1)
+    row_2 = np.concatenate([bot_left,bot_right],axis=1)
+    utils.show_plt(np.concatenate([row_1,row_2],axis=0))
+
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--hsv",action="store_true", default=False)
+    parser.add_argument("--rgb",action="store_true", default=False)
+    parser.add_argument("--mean",action="store_true", default=False)
+    parser.add_argument("--contrast",action="store_true", default=False)
+
+    args = parser.parse_args()
+    main(args)
