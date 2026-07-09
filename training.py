@@ -1,47 +1,10 @@
-import os
-import tifffile
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
-from natsort import natsorted
+import joblib
+import utils
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
-
-# 路径读取
-def read_paths(raw_dir,mask_dir):
-    raw_paths = [
-        os.path.join(raw_dir, f)for f in os.listdir(raw_dir)
-        if f.lower().endswith(".jpg")
-    ]
-    mask_paths = [
-        os.path.join(mask_dir, f) for f in os.listdir(mask_dir)
-        if f.lower().endswith(".tif")
-    ]
-    raw_paths, mask_paths = natsorted(raw_paths),natsorted(mask_paths) # 保证顺序
-    return raw_paths, mask_paths
-
-# 图片读取
-def tiff_read(path):
-    return tifffile.imread(path) > 0 # (h,w) 0 or 1
-
-def jpg_read(path):
-    img = cv2.imread(path)
-    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    return img_rgb # (h,w,c) 0-255
-
-# 红色mask
-def coloured_mask(mask):
-    empty = np.full(mask.shape, 0).astype(np.uint8)
-    coloured_mask = np.stack([mask*120,empty,empty],axis = -1)
-    return coloured_mask # (h,w,c) 0-255
-
-# 展示
-def show_plt(img):
-    plt.figure(figsize=(10, 8))
-    plt.imshow(img)
-    plt.axis("off")
-    plt.show()
 
 # 每个像素的特征值 [R,G,B,H,S,V,X,Y], 0.0-1.0
 def make_features(img_rgb):
@@ -67,8 +30,8 @@ def make_features(img_rgb):
 
 # 像素抽样(默认8000max)
 def sample_pixels(img_path,mask_path,max_pixel=8000):
-    img = jpg_read(img_path)
-    mask = tiff_read(mask_path)
+    img = utils.jpg_read(img_path)
+    mask = utils.tiff_read(mask_path)
 
     if img.shape[:2] != mask.shape[:2]:
         raise ValueError(f"图像和mask大小不匹配: {img_path}")
@@ -96,9 +59,8 @@ def sample_pixels(img_path,mask_path,max_pixel=8000):
 def main():
     seed = 114514
     np.random.seed(seed)
-    img_dir = "residue_background/Limbaugh1-1m20220328/raw/"
-    mask_dir = "residue_background/Limbaugh1-1m20220328/mask/"
-    img_paths, mask_paths = read_paths(img_dir,mask_dir)
+    dir = "residue_background/Ritzville2-SprWheat1m20220329/IMG_0782"
+    img_paths, mask_paths = utils.read_paths(dir,dir)
 
     if len(img_paths) != len(mask_paths):
         raise ValueError("图片和mask数量不匹配")
@@ -140,15 +102,18 @@ def main():
     print("开始训练")
     clf.fit(X_train, y_train)
 
-    print("训练成功，测试")
+    print("训练成功，保存...")
+    joblib.dump(clf, "residue_rf_model.joblib")
 
+    print("训练结果：")
     y_pred = clf.predict(X_test)
     print(classification_report(y_test,y_pred))
 
-    img,mask = jpg_read(test_img_dir[0]),tiff_read(test_mask_dir[0])
+    img,mask = utils.jpg_read(test_img_dir[0]),utils.tiff_read(test_mask_dir[0])
     pred = clf.predict(make_features(img))
     pred_2d = pred.reshape(512,512)
     result = np.stack([pred_2d*200,mask*200,np.zeros_like(pred_2d)],axis=-1)
-    show_plt(result)
+    result = np.concatenate([result,img],axis = 1)
+    utils.show_plt(result)
 
-main()
+#main()
