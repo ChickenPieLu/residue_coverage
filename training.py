@@ -9,38 +9,57 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 
 # 每个像素的特征值 [R,G,B,H,S,V,n*n像素平均亮度], 0.0-1.0
-def make_features(img_rgb):
+def make_features(args,img_rgb):
     img_hsv = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2HSV)
 
     rgb = img_rgb.astype(np.float32)/ 255.0
     hsv = img_hsv.astype(np.float32)
+    lab = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2LAB).astype(np.float32)/255.0
     gray = hsv[:,:,-1].copy()
+    gray_float = gray.astype(np.float32)/255.0
 
     hsv[:,:,0] /= 179.0
     hsv[:,:,1] /= 255.0
     hsv[:,:,2] /= 255.0
 
-    local_mean = cv2.blur(gray,(5,5))[:,:,None]/255.0
-    local_contrast = (gray - cv2.blur(gray,(5,5)))[:,:,None]/255.0
+    area = (15,15)
+    mean_raw = cv2.blur(gray,area)
+    mean_squared_raw = cv2.blur(gray ** 2,area)
+    variance_raw = np.maximum(mean_squared_raw - mean_raw ** 2,0)
+    std_raw = np.sqrt(variance_raw)
+
+    grad_x = cv2.Sobel(gray_float, cv2.CV_32F, 1, 0, ksize=3)
+    grad_y = cv2.Sobel(gray_float, cv2.CV_32F, 0, 1, ksize=3)
+    magnitude = cv2.magnitude(grad_x, grad_y)
+
+    local_mean = mean_raw[:,:,None]/255.0
+    local_contrast = (gray - mean_raw)[:,:,None]/255.0
+    std = std_raw[:,:,None]/255.0
+    sobel = (np.stack([grad_x,grad_y,magnitude],axis=-1)+5)/10
 
     feature_list = []
     if args.hsv: feature_list.append(hsv)
     if args.rgb: feature_list.append(rgb)
     if args.mean: feature_list.append(local_mean)
     if args.contrast: feature_list.append(local_contrast)
+    if args.std: feature_list.append(std)
+    if args.lab: feature_list.append(lab)
+    if args.sobel: feature_list.append(sobel)
+
+    if len(feature_list)==0:feature_list.append(hsv)
 
     features = np.concatenate(feature_list,axis = -1)
     return features.reshape(-1, features.shape[-1])
 
 # 像素抽样(默认8000max)
-def sample_pixels(img_path,mask_path,max_pixel=8000):
+def sample_pixels(args,img_path,mask_path,max_pixel=8000):
     img = utils.jpg_read(img_path)
     mask = utils.tiff_read(mask_path)
 
     if img.shape[:2] != mask.shape[:2]:
         raise ValueError(f"图像和mask大小不匹配: {img_path}")
 
-    features = make_features(img)
+    features = make_features(args,img)
     labels = mask.reshape(-1).astype(np.uint8)
 
     # 分层抽样(一半 true, 一半 false)
@@ -63,11 +82,15 @@ def sample_pixels(img_path,mask_path,max_pixel=8000):
 def main(args):
     seed = 114514
     np.random.seed(seed)
-    dirs = [
+    dirs = ["residue_background/Ritzville2-SprWheat1m20220329",]
+    ex_dirs = [
+        "residue_background/Ritzville3-WheatFallow1pass1m20220329",
         "residue_background/Limbaugh1-1m20220328",
-        "residue_background/Ritzville2-SprWheat1m20220329",
-        "residue_background/Ritzville3-WheatFallow1pass1m20220329"
-        ]
+        "residue_background/Ritzville6-SprWheatWintPeas1m20220329",
+    ]
+    if args.full:
+        dirs.extend(ex_dirs)
+
     img_paths, mask_paths = utils.read_paths(dirs)
 
     if len(img_paths) != len(mask_paths):
@@ -80,7 +103,7 @@ def main(args):
     test_features, test_labels = [],[]
     for i in range(len(train_img_dir)):
         try:
-            features, labels = sample_pixels(train_img_dir[i],train_mask_dir[i])
+            features, labels = sample_pixels(args,train_img_dir[i],train_mask_dir[i])
             train_features.append(features)
             train_labels.append(labels)
         except ValueError:
@@ -88,7 +111,7 @@ def main(args):
             continue
     for j in range(len(test_img_dir)):
         try:
-            features, labels = sample_pixels(test_img_dir[j],test_mask_dir[j])
+            features, labels = sample_pixels(args,test_img_dir[j],test_mask_dir[j])
             test_features.append(features)
             test_labels.append(labels)
         except ValueError:
@@ -114,22 +137,36 @@ def main(args):
     end = time.perf_counter()
 
     print(f"训练完成 (时长 {utils.time_convert(start,end)} )，保存...")
-    joblib.dump(clf, "residue_rf_model.joblib")
+
+    model_bundle = {
+    "model": clf,
+    "features": {
+        "hsv": args.hsv,
+        "rgb": args.rgb,
+        "mean": args.mean,
+        "contrast": args.contrast,
+        "std": args.std,
+        "lab": args.lab,
+        "sobel": args.sobel,
+        },
+    }
+    joblib.dump(model_bundle, "residue_rf_model.joblib")
 
     print("训练结果：")
     y_pred = clf.predict(X_test)
     print(classification_report(y_test,y_pred))
 
-    ref_img = utils.jpg_read(test_img_dir[0]).astype(np.uint8)
-    ref_mask = utils.tiff_read(test_mask_dir[0]).astype(np.uint8)
-    ref_pred = clf.predict(make_features(ref_img)).reshape(512,512)
-    black = np.zeros_like(ref_pred)
-    top_right = np.stack([ref_pred*200,ref_mask*200,black],axis=-1)
-    bot_right = np.stack([ref_pred*200,black,black],axis=-1)
-    bot_left = np.stack([black,ref_mask*200,black],axis=-1)
-    row_1 = np.concatenate([ref_img,top_right],axis=1)
-    row_2 = np.concatenate([bot_left,bot_right],axis=1)
-    utils.show_plt(np.concatenate([row_1,row_2],axis=0))
+    if args.example:
+        ref_img = utils.jpg_read(test_img_dir[0]).astype(np.uint8)
+        ref_mask = utils.tiff_read(test_mask_dir[0]).astype(np.uint8)
+        ref_pred = clf.predict(make_features(args,ref_img)).reshape(ref_img.shape[:2])
+        black = np.zeros_like(ref_pred)
+        top_right = np.stack([ref_pred*200,ref_mask*200,black],axis=-1)
+        bot_right = np.stack([ref_pred*200,black,black],axis=-1)
+        bot_left = np.stack([black,ref_mask*200,black],axis=-1)
+        row_1 = np.concatenate([ref_img,top_right],axis=1)
+        row_2 = np.concatenate([bot_left,bot_right],axis=1)
+        utils.show_plt(np.concatenate([row_1,row_2],axis=0))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -137,6 +174,11 @@ if __name__ == "__main__":
     parser.add_argument("--rgb",action="store_true", default=False)
     parser.add_argument("--mean",action="store_true", default=False)
     parser.add_argument("--contrast",action="store_true", default=False)
+    parser.add_argument("--std",action="store_true",default=False)
+    parser.add_argument("--example",action="store_true", default=False)
+    parser.add_argument("--full",action="store_true", default=False)
+    parser.add_argument("--lab",action="store_true", default=False)
+    parser.add_argument("--sobel",action="store_true", default=False)
 
     args = parser.parse_args()
     main(args)

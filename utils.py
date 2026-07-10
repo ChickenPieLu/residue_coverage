@@ -58,10 +58,14 @@ def show_plt(img):
 
 # 黑底白特征<=>白底黑特征
 def tiff_converter():
-    raw_dir = "residue_background/Limbaugh1-1m20220328/raw/"
-    mask_dir = "residue_background/Limbaugh1-1m20220328/mask/"
-    _, mask_paths = read_paths(raw_dir,mask_dir)
-    for i in range(80,161):
+    dir = ["residue_background/Zak-W-winterBarley_1m_20220401/IMG_0938",
+           "residue_background/Zak-W-winterBarley_1m_20220401/IMG_0939",
+           "residue_background/Zak-W-winterBarley_1m_20220401/IMG_0940",
+           "residue_background/Zak-W-winterBarley_1m_20220401/IMG_0941",
+           "residue_background/Zak-W-winterBarley_1m_20220401/IMG_0942",
+           "residue_background/Zak-W-winterBarley_1m_20220401/IMG_0944",]
+    _, mask_paths = read_paths(dir)
+    for i in range(len(mask_paths)):
         img_path = mask_paths[i]
         mask = tifffile.imread(img_path)
         result = np.where(mask>0, 0, 255).astype(np.uint8)
