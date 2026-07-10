@@ -3,7 +3,6 @@ import utils
 import training
 import numpy as np
 import argparse
-from sklearn.metrics import classification_report
 
 def predict(dirs):
     img_paths, mask_paths = utils.read_paths(dirs)
@@ -22,7 +21,7 @@ def predict(dirs):
     y = utils.tiff_read(mask_paths[img_num]).reshape(-1).astype(np.uint8)
     pred = clf.predict(X)
 
-    print(classification_report(y,pred))
+    training.print_segmentation_metrics(y, pred)
 
     mask = utils.tiff_read(mask_paths[img_num])
     pred_mask = pred.reshape(mask.shape)

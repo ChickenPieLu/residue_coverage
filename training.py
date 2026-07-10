@@ -6,7 +6,13 @@ import time
 import argparse
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report
+from sklearn.metrics import (
+    classification_report,
+    jaccard_score,
+    f1_score,
+    precision_score,
+    recall_score,
+)
 
 # 每个像素的特征值 [R,G,B,H,S,V,n*n像素平均亮度], 0.0-1.0
 def make_features(args,img_rgb):
@@ -77,6 +83,16 @@ def sample_pixels(args,img_path,mask_path,max_pixel=8000):
     chosen = np.concatenate([true_chosen,false_chosen])
     
     return features[chosen],labels[chosen]
+
+# 输出训练数据
+def print_segmentation_metrics(y_true, y_pred):
+    y_true = np.asarray(y_true).reshape(-1).astype(np.uint8)
+    y_pred = np.asarray(y_pred).reshape(-1).astype(np.uint8)
+
+    print(f"IoU:       {jaccard_score(y_true, y_pred, zero_division=0):.4f}")
+    print(f"Dice:      {f1_score(y_true, y_pred, zero_division=0):.4f}")
+    print(f"Precision: {precision_score(y_true, y_pred, zero_division=0):.4f}")
+    print(f"Recall:    {recall_score(y_true, y_pred, zero_division=0):.4f}")
 
 # 核心训练部分
 def main(args):
@@ -153,8 +169,24 @@ def main(args):
     joblib.dump(model_bundle, "residue_rf_model.joblib")
 
     print("训练结果：")
-    y_pred = clf.predict(X_test)
-    print(classification_report(y_test,y_pred))
+    all_true = []
+    all_pred = []
+
+    for img_path, mask_path in zip(test_img_dir, test_mask_dir):
+        img = utils.jpg_read(img_path)
+        mask = utils.tiff_read(mask_path).astype(np.uint8)
+
+        features = make_features(args, img)
+        pred_mask = clf.predict(features).reshape(mask.shape)
+
+        all_true.append(mask.reshape(-1))
+        all_pred.append(pred_mask.reshape(-1))
+
+    all_true = np.concatenate(all_true)
+    all_pred = np.concatenate(all_pred)
+
+    print(classification_report(all_true, all_pred, zero_division=0))
+    print_segmentation_metrics(all_true, all_pred)
 
     if args.example:
         ref_img = utils.jpg_read(test_img_dir[0]).astype(np.uint8)
