@@ -20,7 +20,7 @@ def error_map(mask, pred_mask):
 
     return result
 
-def predict(dirs):
+def predict(dirs,args):
     img_paths, mask_paths = utils.read_paths(dirs)
 
     if len(img_paths) != len(mask_paths):
@@ -32,10 +32,12 @@ def predict(dirs):
 
     saved_args = argparse.Namespace(**feature_config)
 
-    img_num = 0
+    img_num = 20
     X = training.make_features(saved_args,utils.jpg_read(img_paths[img_num]))
     y = utils.tiff_read(mask_paths[img_num]).reshape(-1).astype(np.uint8)
-    pred = clf.predict(X)
+
+    probability = clf.predict_proba(X)[:,1]
+    pred = probability >= saved_args.prob/100.0
 
     print(classification_report(y,pred,zero_division=0))
     training.print_segmentation_metrics(y, pred)
@@ -44,15 +46,17 @@ def predict(dirs):
     pred_mask = pred.reshape(mask.shape)
     errors = error_map(mask, pred_mask)
 
-    utils.show_plt(
-        np.concatenate([
-            utils.jpg_read(img_paths[img_num]),
-            errors,
-        ], axis=1)
-    )
+    if args.example:
+        utils.show_plt(
+            np.concatenate([
+                utils.jpg_read(img_paths[img_num]),
+                errors,
+            ], axis=1)
+        )
 
 if __name__ == "__main__":
-    dirs = ["residue_background/Zak-W-winterBarley_1m_20220401/IMG_0939",]
+    dirs = ["residue_background/E",]
     parser = argparse.ArgumentParser()
+    parser.add_argument("--example",action="store_true", default=False)
     args = parser.parse_args()
-    predict(dirs)
+    predict(dirs,args)

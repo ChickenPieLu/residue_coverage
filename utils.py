@@ -3,6 +3,7 @@ import tifffile
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import argparse
 from natsort import natsorted
 
 # 路径读取
@@ -79,3 +80,35 @@ def time_convert(start, end):
     temp %= 60
     result += f"{temp:.2f}s"
     return result
+
+def int_0_to_100(value: str) -> int:
+    number = int(value)
+
+    if not 0 <= number <= 100:
+        raise argparse.ArgumentTypeError(
+            f"{value} must be an integer between 0 and 100"
+        )
+
+    return number
+
+def process_seq(seq):
+    seq_list = list(seq)
+    length = len(seq_list)
+    allowed = ['A','B','C','D',"E"]
+
+    if len(list(set(seq_list))) != length:
+        raise ValueError(seq+" shouldn't repeat any letter")
+    
+    train_dir = []
+    for i in range(length-1):
+        d = seq_list[i]
+        if d not in allowed:
+            raise ValueError(seq+" must be a sequence of A,B,C,D,E")
+        train_dir.append("residue_background/" + d)
+    
+    test = seq_list[length-1]
+    if test not in allowed:
+            raise ValueError(seq+" must be a sequence of A,B,C,D,E")
+    test_dir = ["residue_background/"+test,]
+    
+    return train_dir,test_dir

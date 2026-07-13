@@ -4,6 +4,7 @@ import joblib
 import utils #utils.py
 import time
 import argparse
+import subprocess
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
@@ -52,7 +53,10 @@ def make_features(args,img_rgb):
     if args.lab: feature_list.append(lab)
     if args.sobel: feature_list.append(sobel)
 
-    if len(feature_list)==0:feature_list.append(hsv)
+    if len(feature_list)==0: # 默认
+        feature_list.append(hsv)
+        feature_list.append(local_contrast)
+        feature_list.append(std)
 
     features = np.concatenate(feature_list,axis = -1)
     return features.reshape(-1, features.shape[-1])
@@ -98,25 +102,24 @@ def print_segmentation_metrics(y_true, y_pred):
 def main(args):
     seed = 114514
     np.random.seed(seed)
-    dirs = ["residue_background/Ritzville2-SprWheat1m20220329",]
-    ex_dirs = [
-        "residue_background/Ritzville3-WheatFallow1pass1m20220329",
-        "residue_background/Limbaugh1-1m20220328",
-        "residue_background/Ritzville6-SprWheatWintPeas1m20220329",
-    ]
-    if args.full:
-        dirs.extend(ex_dirs)
+    training_dirs,test_dirs = utils.process_seq(args.seq)
 
-    img_paths, mask_paths = utils.read_paths(dirs)
+    print("训练：")
+    for d in training_dirs:
+        print(d)
+    print("测试：")
+    for d in test_dirs:
+        print(d)
 
-    if len(img_paths) != len(mask_paths):
-        raise ValueError("图片和mask数量不匹配")
-    
-    # 分离训练和测试集
-    train_img_dir, test_img_dir, train_mask_dir, test_mask_dir = train_test_split(img_paths,mask_paths,random_state=seed)
+    train_img_dir, train_mask_dir = utils.read_paths(training_dirs)
+    test_img_dir, test_mask_dir = utils.read_paths(test_dirs)
+
+    if len(train_img_dir) != len(train_mask_dir):
+        raise ValueError("训练集图片和mask数量不匹配")
+    if len(test_img_dir) != len(test_mask_dir):
+        raise ValueError("验证集图片和mask数量不匹配")
     
     train_features, train_labels = [],[]
-    test_features, test_labels = [],[]
     for i in range(len(train_img_dir)):
         try:
             features, labels = sample_pixels(args,train_img_dir[i],train_mask_dir[i])
@@ -125,18 +128,9 @@ def main(args):
         except ValueError:
             print(f"错误: {str(train_img_dir[i])} 跳过该图片")
             continue
-    for j in range(len(test_img_dir)):
-        try:
-            features, labels = sample_pixels(args,test_img_dir[j],test_mask_dir[j])
-            test_features.append(features)
-            test_labels.append(labels)
-        except ValueError:
-            print(f"错误: {str(test_img_dir[j])} 跳过该图片")
-            continue
-    X_train, y_train = np.concatenate(train_features), np.concatenate(train_labels)
-    X_test, y_test = np.concatenate(test_features), np.concatenate(test_labels)
 
-    print("成功创建训练与测试集")
+    X_train, y_train = np.concatenate(train_features), np.concatenate(train_labels)
+    print("成功创建训练与验证集")
 
     clf = RandomForestClassifier(
         n_estimators=200,
@@ -164,11 +158,12 @@ def main(args):
         "std": args.std,
         "lab": args.lab,
         "sobel": args.sobel,
+        "prob": args.prob,
         },
     }
     joblib.dump(model_bundle, "residue_rf_model.joblib")
 
-    print("训练结果：")
+    print("训练结果：（阈值："+str(args.prob)+"%)")
     all_true = []
     all_pred = []
 
@@ -177,7 +172,8 @@ def main(args):
         mask = utils.tiff_read(mask_path).astype(np.uint8)
 
         features = make_features(args, img)
-        pred_mask = clf.predict(features).reshape(mask.shape)
+        probability = clf.predict_proba(features)[:, 1]
+        pred_mask = (probability >= args.prob/100.0).reshape(img.shape[:2])
 
         all_true.append(mask.reshape(-1))
         all_pred.append(pred_mask.reshape(-1))
@@ -208,9 +204,15 @@ if __name__ == "__main__":
     parser.add_argument("--contrast",action="store_true", default=False)
     parser.add_argument("--std",action="store_true",default=False)
     parser.add_argument("--example",action="store_true", default=False)
-    parser.add_argument("--full",action="store_true", default=False)
     parser.add_argument("--lab",action="store_true", default=False)
     parser.add_argument("--sobel",action="store_true", default=False)
-
+    parser.add_argument("--prob",type=utils.int_0_to_100,default=50)
+    parser.add_argument("--seq",type=str,default="ABCD")
     args = parser.parse_args()
     main(args)
+
+    subprocess.run([
+        "osascript",
+        "-e",
+        'display notification "Model training completed" with title "Python"'
+    ])
