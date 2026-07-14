@@ -18,16 +18,26 @@ def read_paths(dirs):
             os.path.join(d, f) for f in os.listdir(d)
             if f.lower().endswith(".tif")
         ]
+        if len(temp_img)!=len(temp_mask):
+            raise ValueError(d+"中图片和mask数量不匹配")
+        
         img_paths.extend(natsorted(temp_img))
         mask_paths.extend(natsorted(temp_mask))
     return img_paths, mask_paths
 
 # 图片读取
 def tiff_read(path):
-    return tifffile.imread(path) > 0 # (h,w) 0 or 1
+    result = tifffile.imread(path)
+    if result is None:
+        raise ValueError(f"无法读取图片：{path}")
+    
+    return result > 0 # (h,w) 0 or 1
 
 def jpg_read(path):
     img = cv2.imread(path)
+    if img is None:
+        raise ValueError(f"无法读取图片：{path}")
+    
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     return img_rgb # (h,w,c) 0-255
 
@@ -92,9 +102,11 @@ def int_0_to_100(value: str) -> int:
     return number
 
 def process_seq(seq):
-    seq_list = list(seq)
+    seq_list = [x.upper() for x in list(seq)]
     length = len(seq_list)
-    allowed = ['A','B','C','D',"E"]
+    allowed = ['A','B','C','D']
+    if len(seq)<2:
+        raise ValueError(seq+" 应多于2个字母")
 
     if len(list(set(seq_list))) != length:
         raise ValueError(seq+" shouldn't repeat any letter")
@@ -103,12 +115,12 @@ def process_seq(seq):
     for i in range(length-1):
         d = seq_list[i]
         if d not in allowed:
-            raise ValueError(seq+" must be a sequence of A,B,C,D,E")
+            raise ValueError(seq+" 只能包含A,B,C,D")
         train_dir.append("residue_background/" + d)
     
     test = seq_list[length-1]
     if test not in allowed:
-            raise ValueError(seq+" must be a sequence of A,B,C,D,E")
+            raise ValueError(seq+" 只能包含A,B,C,D")
     test_dir = ["residue_background/"+test,]
     
     return train_dir,test_dir

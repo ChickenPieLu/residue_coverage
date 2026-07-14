@@ -6,7 +6,6 @@ import time
 import argparse
 import subprocess
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import (
     classification_report,
     jaccard_score,
@@ -29,20 +28,15 @@ def make_features(args,img_rgb):
     hsv[:,:,1] /= 255.0
     hsv[:,:,2] /= 255.0
 
-    area = (15,15)
+    area = (args.area,args.area)
     mean_raw = cv2.blur(gray,area)
     mean_squared_raw = cv2.blur(gray ** 2,area)
     variance_raw = np.maximum(mean_squared_raw - mean_raw ** 2,0)
     std_raw = np.sqrt(variance_raw)
 
-    grad_x = cv2.Sobel(gray_float, cv2.CV_32F, 1, 0, ksize=3)
-    grad_y = cv2.Sobel(gray_float, cv2.CV_32F, 0, 1, ksize=3)
-    magnitude = cv2.magnitude(grad_x, grad_y)
-
     local_mean = mean_raw[:,:,None]/255.0
     local_contrast = (gray - mean_raw)[:,:,None]/255.0
     std = std_raw[:,:,None]/255.0
-    sobel = (np.stack([grad_x,grad_y,magnitude],axis=-1)+5)/10
 
     feature_list = []
     if args.hsv: feature_list.append(hsv)
@@ -51,7 +45,6 @@ def make_features(args,img_rgb):
     if args.contrast: feature_list.append(local_contrast)
     if args.std: feature_list.append(std)
     if args.lab: feature_list.append(lab)
-    if args.sobel: feature_list.append(sobel)
 
     if len(feature_list)==0: # 默认
         feature_list.append(hsv)
@@ -72,21 +65,33 @@ def sample_pixels(args,img_path,mask_path,max_pixel=8000):
     features = make_features(args,img)
     labels = mask.reshape(-1).astype(np.uint8)
 
-    # 分层抽样(一半 true, 一半 false)
-    true_i = np.nonzero(labels)[0]
+    true_i = np.nonzero(labels == 1)[0]
     false_i = np.nonzero(labels == 0)[0]
 
-    lim = int(max_pixel/2)
-    if len(true_i) > lim:
-        true_chosen = np.random.choice(true_i, size=lim, replace=False)
-    else: true_chosen = true_i
-    if len(false_i) > lim:
-        false_chosen = np.random.choice(false_i, size = lim, replace=False)
-    else: false_chosen = false_i
+    positive_target = max_pixel // (1 + args.neg)
+    negative_target = max_pixel - positive_target
 
-    chosen = np.concatenate([true_chosen,false_chosen])
-    
-    return features[chosen],labels[chosen]
+    positive_count = min(len(true_i), positive_target)
+    negative_count = min(len(false_i), negative_target)
+
+    true_chosen = np.random.choice(
+        true_i,
+        size=positive_count,
+        replace=False
+    )
+
+    false_chosen = np.random.choice(
+        false_i,
+        size=negative_count,
+        replace=False
+    )
+
+    chosen = np.concatenate([true_chosen, false_chosen])
+
+    # 打乱顺序，不让前面全是正类、后面全是负类
+    np.random.shuffle(chosen)
+
+    return features[chosen], labels[chosen]
 
 # 输出训练数据
 def print_segmentation_metrics(y_true, y_pred):
@@ -110,6 +115,16 @@ def main(args):
     print("测试：")
     for d in test_dirs:
         print(d)
+    print("训练用特征：")
+    feature_list = []
+    if args.hsv: feature_list.append("hsv")
+    if args.rgb: feature_list.append("rgb")
+    if args.mean: feature_list.append("local_mean")
+    if args.contrast: feature_list.append("local_contrast")
+    if args.std: feature_list.append("std")
+    if args.lab: feature_list.append("lab")
+    if len(feature_list) == 0: print("['hsv','local_contrast','std']")
+    else: print(str(feature_list))
 
     train_img_dir, train_mask_dir = utils.read_paths(training_dirs)
     test_img_dir, test_mask_dir = utils.read_paths(test_dirs)
@@ -132,21 +147,27 @@ def main(args):
     X_train, y_train = np.concatenate(train_features), np.concatenate(train_labels)
     print("成功创建训练与验证集")
 
+    class_counts = np.bincount(y_train, minlength=2)
+
+    print("背景像素数量：", class_counts[0])
+    print("秸秆像素数量：", class_counts[1])
+    print("秸秆占比：", y_train.mean())
+
     clf = RandomForestClassifier(
-        n_estimators=200,
-        max_depth=10,
-        class_weight='balanced',
+        n_estimators=50,
+        max_depth=15,
+        class_weight=None,
         random_state=seed,
         n_jobs=-1
     )
 
-    print("开始训练")
+    print("开始训练\n")
 
     start = time.perf_counter()
     clf.fit(X_train, y_train)
-    end = time.perf_counter()
+    training_end = time.perf_counter()
 
-    print(f"训练完成 (时长 {utils.time_convert(start,end)} )，保存...")
+    print(f"训练完成 (时长 {utils.time_convert(start,training_end)} )，保存...")
 
     model_bundle = {
     "model": clf,
@@ -157,15 +178,14 @@ def main(args):
         "contrast": args.contrast,
         "std": args.std,
         "lab": args.lab,
-        "sobel": args.sobel,
-        "prob": args.prob,
+        "area":args.area,
         },
     }
     joblib.dump(model_bundle, "residue_rf_model.joblib")
 
-    print("训练结果：（阈值："+str(args.prob)+"%)")
+    print("训练结果：")
     all_true = []
-    all_pred = []
+    all_probability = []
 
     for img_path, mask_path in zip(test_img_dir, test_mask_dir):
         img = utils.jpg_read(img_path)
@@ -173,28 +193,24 @@ def main(args):
 
         features = make_features(args, img)
         probability = clf.predict_proba(features)[:, 1]
-        pred_mask = (probability >= args.prob/100.0).reshape(img.shape[:2])
 
         all_true.append(mask.reshape(-1))
-        all_pred.append(pred_mask.reshape(-1))
+        all_probability.append(probability)
 
     all_true = np.concatenate(all_true)
-    all_pred = np.concatenate(all_pred)
+    all_probability = np.concatenate(all_probability)
 
-    print(classification_report(all_true, all_pred, zero_division=0))
-    print_segmentation_metrics(all_true, all_pred)
+    th_list = [0.60]
+    if args.threshold: th_list = [0.50, 0.55, 0.60, 0.65, 0.70]
+    for threshold in th_list:
+        print(f"(阈值：{str(threshold)})")
+        all_pred = all_probability >= threshold
 
-    if args.example:
-        ref_img = utils.jpg_read(test_img_dir[0]).astype(np.uint8)
-        ref_mask = utils.tiff_read(test_mask_dir[0]).astype(np.uint8)
-        ref_pred = clf.predict(make_features(args,ref_img)).reshape(ref_img.shape[:2])
-        black = np.zeros_like(ref_pred)
-        top_right = np.stack([ref_pred*200,ref_mask*200,black],axis=-1)
-        bot_right = np.stack([ref_pred*200,black,black],axis=-1)
-        bot_left = np.stack([black,ref_mask*200,black],axis=-1)
-        row_1 = np.concatenate([ref_img,top_right],axis=1)
-        row_2 = np.concatenate([bot_left,bot_right],axis=1)
-        utils.show_plt(np.concatenate([row_1,row_2],axis=0))
+        print(classification_report(all_true, all_pred, zero_division=0))
+        print_segmentation_metrics(all_true, all_pred)
+    
+    end = time.perf_counter()
+    print(f"总用时：{utils.time_convert(start,end)}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -205,9 +221,16 @@ if __name__ == "__main__":
     parser.add_argument("--std",action="store_true",default=False)
     parser.add_argument("--example",action="store_true", default=False)
     parser.add_argument("--lab",action="store_true", default=False)
-    parser.add_argument("--sobel",action="store_true", default=False)
-    parser.add_argument("--prob",type=utils.int_0_to_100,default=50)
+    parser.add_argument("--threshold",action="store_true", default=False)
     parser.add_argument("--seq",type=str,default="ABCD")
+    parser.add_argument("--area",type=int,choices=range(1,50),default=15)
+    parser.add_argument(
+        "--neg",
+        type=int,
+        choices=[1, 2, 3],
+        default=1,
+        help="背景像素相对于秸秆像素的抽样比例"
+    )
     args = parser.parse_args()
     main(args)
 

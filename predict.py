@@ -20,7 +20,7 @@ def error_map(mask, pred_mask):
 
     return result
 
-def predict(dirs,args):
+def predict(dirs):
     img_paths, mask_paths = utils.read_paths(dirs)
 
     if len(img_paths) != len(mask_paths):
@@ -31,32 +31,42 @@ def predict(dirs,args):
     feature_config = bundle["features"]
 
     saved_args = argparse.Namespace(**feature_config)
+    threshold = 0.65
 
-    img_num = 20
-    X = training.make_features(saved_args,utils.jpg_read(img_paths[img_num]))
-    y = utils.tiff_read(mask_paths[img_num]).reshape(-1).astype(np.uint8)
+    all_error = []
+    all_signed_error = []
+    for img_path, mask_path in zip(img_paths, mask_paths):
+        img = utils.jpg_read(img_path)
+        mask = utils.tiff_read(mask_path).astype(np.uint8).reshape(-1)
+        if not img.shape[:2] == mask.shape:
+            raise ValueError("图片和mask大小不一致")
 
-    probability = clf.predict_proba(X)[:,1]
-    pred = probability >= saved_args.prob/100.0
+        features = training.make_features(saved_args, img)
+        probability = clf.predict_proba(features)[:, 1]
 
-    print(classification_report(y,pred,zero_division=0))
-    training.print_segmentation_metrics(y, pred)
+        pred = probability >= threshold
 
-    mask = utils.tiff_read(mask_paths[img_num])
-    pred_mask = pred.reshape(mask.shape)
-    errors = error_map(mask, pred_mask)
+        true_coverage = np.sum(mask)/len(mask)
+        pred_coverage = np.sum(pred)/len(pred)
+        error = np.abs(true_coverage-pred_coverage)
+        signed_error = true_coverage-pred_coverage
+        all_signed_error.append(signed_error)
+        all_error.append(error)
 
-    if args.example:
-        utils.show_plt(
-            np.concatenate([
-                utils.jpg_read(img_paths[img_num]),
-                errors,
-            ], axis=1)
-        )
+    print("threshold: "+str(threshold))
+    print(f"mean error: {np.mean(all_error):.4f}")
+    print(f"mean signed error: {np.mean(all_signed_error):.4f}")
+    print(f"median error: {np.median(all_error):.4f}")
+    print(f"highest error: {np.max(all_error):.4f}")
+    print(f"lowest error: {np.min(all_error):.4f}")
 
 if __name__ == "__main__":
-    dirs = ["residue_background/E",]
     parser = argparse.ArgumentParser()
-    parser.add_argument("--example",action="store_true", default=False)
+    parser.add_argument("--seq",type=str,default="d")
     args = parser.parse_args()
-    predict(dirs,args)
+
+    d = args.seq.upper()
+    if (d not in ['A','B','C','D']) or len(d)!=1:
+        raise ValueError(f"{d} 应该是A,B,C,D其中之一")
+    dirs = ["residue_background/"+d,]
+    predict(dirs)
