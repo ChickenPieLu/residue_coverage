@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import joblib
-import utils #utils.py
+import legacy.classical_ml.utils as utils #utils.py
 import time
 import argparse
 import subprocess

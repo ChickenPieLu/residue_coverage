@@ -1,9 +1,9 @@
 import joblib
-import utils
-import training
+import legacy.classical_ml.utils as utils
+import legacy.classical_ml.training as training
 import numpy as np
 import argparse
-from sklearn.metrics import classification_report
+import matplotlib.pyplot as plt
 
 def error_map(mask, pred_mask):
     mask = mask.astype(bool)
@@ -31,13 +31,20 @@ def predict(dirs):
     feature_config = bundle["features"]
 
     saved_args = argparse.Namespace(**feature_config)
-    threshold = 0.65
+    threshold = 0.60
 
     all_error = []
     all_signed_error = []
+    all_true_coverage = []
+    all_pred_coverage = []
+    max_error_path = ""
+    max_error_mask = None
+    max_error_prob = None
+    max_error = float('-inf')
     for img_path, mask_path in zip(img_paths, mask_paths):
         img = utils.jpg_read(img_path)
-        mask = utils.tiff_read(mask_path).astype(np.uint8).reshape(-1)
+        mask = utils.tiff_read(mask_path).astype(np.uint8)
+        mask_1D = mask.reshape(-1)
         if not img.shape[:2] == mask.shape:
             raise ValueError("图片和mask大小不一致")
 
@@ -46,12 +53,20 @@ def predict(dirs):
 
         pred = probability >= threshold
 
-        true_coverage = np.sum(mask)/len(mask)
+        true_coverage = np.sum(mask_1D)/len(mask_1D)
         pred_coverage = np.sum(pred)/len(pred)
         error = np.abs(true_coverage-pred_coverage)
         signed_error = true_coverage-pred_coverage
         all_signed_error.append(signed_error)
         all_error.append(error)
+        all_true_coverage.append(true_coverage)
+        all_pred_coverage.append(pred_coverage)
+
+        if error > max_error:
+            max_error = error
+            max_error_path = img_path
+            max_error_mask = mask
+            max_error_prob = probability.reshape(-1,512)
 
     print("threshold: "+str(threshold))
     print(f"mean error: {np.mean(all_error):.4f}")
@@ -59,6 +74,21 @@ def predict(dirs):
     print(f"median error: {np.median(all_error):.4f}")
     print(f"highest error: {np.max(all_error):.4f}")
     print(f"lowest error: {np.min(all_error):.4f}")
+
+    if max_error_path != "":
+        max_name = max_error_path[21:-4]
+        print(f"最大绝对误差图片：{max_name}")
+        for t in [0.6]:
+            max_error_pred = max_error_prob >= t
+            e = np.abs(np.sum(max_error_pred)/max_error_pred.size - np.sum(max_error_mask)/max_error_mask.size)
+            print(f"绝对误差：{e:.4f}")
+            training.print_segmentation_metrics(max_error_mask,max_error_pred)
+            #utils.show_plt(error_map(max_error_mask,max_error_pred))
+    
+    plt.scatter(all_true_coverage,all_pred_coverage,color='blue', marker='o')
+    plt.axline((0, 0), slope=1)
+    plt.show()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

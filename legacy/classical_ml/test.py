@@ -1,4 +1,4 @@
-import utils
+import legacy.classical_ml.utils as utils
 import argparse
 import numpy as np
 from pathlib import Path
