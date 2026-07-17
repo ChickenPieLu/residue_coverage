@@ -4,6 +4,7 @@ import torch.optim as optim
 import utils
 import argparse
 from dataset import ResidueDataset
+from model import MiniUNet
 
 def main(args):
     file_names = utils.read_file_names(args.dir)
@@ -14,15 +15,13 @@ def main(args):
     dataset = ResidueDataset(img_paths, mask_paths)
 
     img, mask = dataset[0]
+    img = img.unsqueeze(0)
+    print("Image:", img.shape)
+    print("Mask:", mask.shape)
 
-    print("Dataset length:", len(dataset))
-    print("Image shape:", img.shape)
-    print("Image dtype:", img.dtype)
-    print("Image range:", img.min(), img.max())
-
-    print("Mask shape:", mask.shape)
-    print("Mask dtype:", mask.dtype)
-    print("Mask values:", mask.unique())
+    model = MiniUNet()
+    output = model(img)
+    print("Output:", output.shape)
     
 
 if __name__ == "__main__":

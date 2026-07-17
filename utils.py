@@ -19,7 +19,7 @@ def jpg_read(path):
 
     image = torch.from_numpy(img_rgb)
     image = image.permute(2,0,1) #(h,w,3) to (3,h,w)
-    image = (image > 0).float()
+    image = image.float()/255.0
     return image 
 
 def tif_read(path):
@@ -29,7 +29,7 @@ def tif_read(path):
     
     mask = torch.from_numpy(mask)
     mask = mask.unsqueeze(0) #(h,w) to (1,h,w)
-    mask = mask.float()/255.0
+    mask = (mask>0).float()
     return mask
 
 def visualise(image,mask):
