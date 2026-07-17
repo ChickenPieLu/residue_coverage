@@ -1,77 +1,116 @@
 import torch
 import torch.nn as nn
+import torch.optim as optim
+
+
+class MiniUNet(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.block1 = nn.Sequential(
+            nn.Conv2d(3,16,kernel_size=3,padding=1),
+            nn.ReLU(),
+            nn.Conv2d(16,16,kernel_size=3,padding=1),
+            nn.ReLU()
+        )
+        self.block2 = nn.Sequential(
+            nn.Conv2d(16,32,kernel_size=3,padding=1),
+            nn.ReLU(),
+            nn.Conv2d(32,32,kernel_size=3,padding=1),
+            nn.ReLU()
+        )
+        self.block3 = nn.Sequential(
+            nn.Conv2d(32,64,kernel_size=3,padding=1),
+            nn.ReLU(),
+            nn.Conv2d(64,64,kernel_size=3,padding=1),
+            nn.ReLU()
+        )
+        self.up_block1 = nn.Sequential(
+            nn.Conv2d(64,32,kernel_size=3,padding=1),
+            nn.ReLU(),
+            nn.Conv2d(32,32,kernel_size=3,padding=1),
+            nn.ReLU()
+        )
+        self.up_block2 = nn.Sequential(
+            nn.Conv2d(32,16,kernel_size=3,padding=1),
+            nn.ReLU(),
+            nn.Conv2d(16,16,kernel_size=3,padding=1),
+            nn.ReLU()
+        )
+        self.up1 = nn.ConvTranspose2d(
+            in_channels=64,
+            out_channels=32,
+            kernel_size=2,
+            stride=2
+        )
+        self.up2 = nn.ConvTranspose2d(
+            in_channels=32,
+            out_channels=16,
+            kernel_size=2,
+            stride=2
+        )
+        self.to_pred = nn.Conv2d(
+            in_channels=16,
+            out_channels=1,
+            kernel_size=1
+        )
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+
+    def forward(self,X):
+        x1 = self.block1(X)
+        p1 = self.pool(x1)
+
+        x2 = self.block2(p1)
+        p2 = self.pool(x2)
+
+        x3 = self.block3(p2)
+
+        
+        u1 = self.up1(x3)
+        c1 = torch.cat([u1,x2],dim=1)
+        y1 = self.up_block1(c1)
+
+        
+        u2 = self.up2(y1)
+        c2 = torch.cat([u2,x1],dim=1)
+        y2 = self.up_block2(c2)
+
+        pred = self.to_pred(y2)
+
+        return pred
+    
 
 def main():
     torch.manual_seed(114514)
 
-    X = torch.randn(4,3,512,512)
+    X = torch.randn(4,3,128,128)
+    mask = (X[:,0:1]>0).float()
+    model = MiniUNet()
+    loss_fn = nn.BCEWithLogitsLoss()
+    optimiser = optim.Adam(
+        model.parameters(),
+        lr = 0.001
+    )
 
-    block1 = nn.Sequential(
-        nn.Conv2d(3,16,kernel_size=3,padding=1),
-        nn.ReLU(),
-        nn.Conv2d(16,16,kernel_size=3,padding=1),
-        nn.ReLU()
-    )
-    block2 = nn.Sequential(
-        nn.Conv2d(16,32,kernel_size=3,padding=1),
-        nn.ReLU(),
-        nn.Conv2d(32,32,kernel_size=3,padding=1),
-        nn.ReLU()
-    )
-    block3 = nn.Sequential(
-        nn.Conv2d(32,64,kernel_size=3,padding=1),
-        nn.ReLU(),
-        nn.Conv2d(64,64,kernel_size=3,padding=1),
-        nn.ReLU()
-    )
-    up_block1 = nn.Sequential(
-        nn.Conv2d(64,32,kernel_size=3,padding=1),
-        nn.ReLU(),
-        nn.Conv2d(32,32,kernel_size=3,padding=1),
-        nn.ReLU()
-    )
-    up_block2 = nn.Sequential(
-        nn.Conv2d(32,16,kernel_size=3,padding=1),
-        nn.ReLU(),
-        nn.Conv2d(16,16,kernel_size=3,padding=1),
-        nn.ReLU()
-    )
-    pool = nn.MaxPool2d(kernel_size=2, stride=2)
+    for epoch in range(100):
+        optimiser.zero_grad()
 
-    x1 = block1(X)
-    p1 = pool(x1)
+        pred = model(X)
+        loss = loss_fn(pred,mask)
 
-    x2 = block2(p1)
-    p2 = pool(x2)
+        if epoch % 10 == 0:
+            print(f"epoch: {epoch}")
+            print(f"loss: {loss:.6f}")
 
-    x3 = block3(p2)
+        loss.backward()
+        optimiser.step()
 
-    up1 = nn.ConvTranspose2d(
-        in_channels=64,
-        out_channels=32,
-        kernel_size=2,
-        stride=2
-    )
-    u1 = up1(x3)
-    c1 = torch.cat([u1,x2],dim=1)
-    y1 = up_block1(c1)
-
-    up2 = nn.ConvTranspose2d(
-        in_channels=32,
-        out_channels=16,
-        kernel_size=2,
-        stride=2
-    )
-    u2 = up2(y1)
-    c2 = torch.cat([u2,x1],dim=1)
-    y2 = up_block2(c2)
-
-    to_pred = nn.Conv2d(
-        in_channels=16,
-        out_channels=1,
-        kernel_size=1
-    )
-    pred = to_pred(y2)
+    with torch.no_grad():
+        logits = model(X)
+        probabilities = torch.sigmoid(logits)
+        predictions = (probabilities>0.5).float()
+        accuracy = (predictions == mask).float().mean()
+        print(f"final accuracy: {accuracy:.6f}")
 
     print(pred.shape)
 
