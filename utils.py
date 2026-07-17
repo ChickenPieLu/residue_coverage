@@ -2,7 +2,6 @@ import os
 import cv2
 import torch
 import tifffile
-import matplotlib as plt
 
 def read_file_names(directory):
     full_path = "residue_background/"+directory
@@ -20,7 +19,7 @@ def jpg_read(path):
 
     image = torch.from_numpy(img_rgb)
     image = image.permute(2,0,1) #(h,w,3) to (3,h,w)
-    image = image.float()/255.0
+    image = (image > 0).float()
     return image 
 
 def tif_read(path):

@@ -3,25 +3,26 @@ import torch.nn as nn
 import torch.optim as optim
 import utils
 import argparse
+from dataset import ResidueDataset
 
 def main(args):
     file_names = utils.read_file_names(args.dir)
-    train_pairs = [
-        [utils.jpg_read(name+".jpg"),utils.tif_read(name+".tif")] for name in file_names
-    ]
-    img = train_pairs[0][0]
-    mask = train_pairs[0][1]
-    print(img.shape)
-    print(img.dtype)
-    print(img.min(),img.max())
-    print()
 
-    print(mask.shape)
-    print(mask.dtype)
-    print(mask.unique())
-    utils.visualise(img,mask)
+    img_paths = [p + ".jpg" for p in file_names]
+    mask_paths = [p + ".tif" for p in file_names]
 
+    dataset = ResidueDataset(img_paths, mask_paths)
 
+    img, mask = dataset[0]
+
+    print("Dataset length:", len(dataset))
+    print("Image shape:", img.shape)
+    print("Image dtype:", img.dtype)
+    print("Image range:", img.min(), img.max())
+
+    print("Mask shape:", mask.shape)
+    print("Mask dtype:", mask.dtype)
+    print("Mask values:", mask.unique())
     
 
 if __name__ == "__main__":
@@ -33,5 +34,5 @@ if __name__ == "__main__":
     d = args.dir.upper()
     if not d in ['A','B','C','D']:
         raise ValueError(f"{d} must be one of A,B,C,D")
-    
+    args.dir = d
     main(args)
