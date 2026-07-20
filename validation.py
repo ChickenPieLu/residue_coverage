@@ -6,7 +6,7 @@ import utils
 from dataset import ResidueDataset
 from model import MiniUNet
 
-def validate():
+def validation():
     # use mps if available
     if torch.backends.mps.is_available():
         device = torch.device("mps")
@@ -47,16 +47,14 @@ def validate():
             probabilities = torch.sigmoid(outputs)
             preds = (probabilities > 0.5).float()
 
-            # true_coverage = masks.mean(dim=(1, 2, 3))
-            # pred_coverage = preds.mean(dim=(1, 2, 3))
+            true_coverage = masks.mean(dim=(1, 2, 3))
+            pred_coverage = preds.mean(dim=(1, 2, 3))
 
-            # absolute_errors = torch.abs(
-            #     pred_coverage - true_coverage
-            # )
-            # print(f"batch {batch_index}:")
-            # print(f"MAE: {torch.mean(absolute_errors):.6f}")
-            if batch_index == 17:
-                utils.visualise(imgs[0],masks[0],preds[0])
+            absolute_errors = torch.abs(
+                pred_coverage - true_coverage
+            )
+            print(f"batch {batch_index}:")
+            print(f"MAE: {torch.mean(absolute_errors):.6f}")
 
 if __name__ == "__main__":
-    validate()
+    validation()

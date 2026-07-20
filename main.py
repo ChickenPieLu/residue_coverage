@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
+import numpy as np
+import random
 import utils
 from dataset import ResidueDataset
 from model import MiniUNet
@@ -54,9 +56,21 @@ def evaluate(model, loader, criterion, device):
         f"pred_ratio={pred_ratio:.4f}, "
         f"max_prob={max_probability:.4f}"
     )
+    return iou
 
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
 
 def main():
+
+    # random seed to fix random process
+    SEED = 114514
+    set_seed(SEED)
+    generator = torch.Generator()
+    generator.manual_seed(SEED) # for dataloaders
+
     # use mps if available
     if torch.backends.mps.is_available():
         device = torch.device("mps")
@@ -64,6 +78,8 @@ def main():
         device = torch.device("cpu")
     print("Using device:", device)
 
+
+    # training set loader
     training_dirs = ['A','B','C']
     file_names = utils.read_file_names(training_dirs)
 
@@ -77,9 +93,25 @@ def main():
         dataset,
         batch_size=4,
         shuffle=True,
-        num_workers=0
+        num_workers=0,
+        generator=generator
     )
 
+    # validation set loader
+    val_file_names = utils.read_file_names(['D'])
+    val_img_paths = [p + ".jpg" for p in val_file_names]
+    val_mask_paths = [p + ".tif" for p in val_file_names]
+
+    val_dataset = ResidueDataset(val_img_paths,val_mask_paths)
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size= 4,
+        shuffle= False,
+        num_workers= 0,
+        generator=generator
+    )
+
+    # model
     model = MiniUNet().to(device)
     criterion = nn.BCEWithLogitsLoss()
     optimiser = optim.Adam(
@@ -87,8 +119,11 @@ def main():
         lr = 0.001
     )
 
-    for epoch in range(20):
-        print(f"epoch: {epoch}")
+    #training
+    best_val_iou = 0.0
+
+    for epoch in range(40):
+        print(f"\nEpoch {epoch}")
 
         model.train()
         total_loss = 0
@@ -107,21 +142,23 @@ def main():
 
             # (average loss of 1 img in batch) * (# of imgs in a batch)
             total_loss += loss.item() * imgs.size(0) 
-
-            if batch_index % 20 == 0:
-                print(f"batch {batch_index}/{len(loader)}")
         
         # avg loss of the full training set
         avg_loss = total_loss/len(dataset)
-        print(f"Average loss: {avg_loss:.6f}\n")
+        print(f"Average loss: {avg_loss:.6f}")
+        print("Validation on D:")
+        val_iou = evaluate(model,val_loader,criterion,device)
 
-    print("Training set:")
+        if val_iou > best_val_iou:
+            print("(best iou so far)")
+            best_val_iou = val_iou
+            torch.save(
+                model.state_dict(),
+                "mini_unet_abc.pth"
+            )
+
+    print("\nTraining set:")
     evaluate(model, loader, criterion, device)
-    torch.save(
-        model.state_dict(),
-        "mini_unet_abc.pth"
-    )
-
 
 if __name__ == "__main__":
     main()
