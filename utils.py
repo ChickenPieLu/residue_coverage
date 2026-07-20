@@ -37,7 +37,7 @@ def tif_read(path):
     mask = (mask>0).float()
     return mask
 
-def visualise(image,mask):
+def visualise(image, real_mask, pred_mask):
     import matplotlib.pyplot as plt
 
     image_to_show = (
@@ -48,24 +48,48 @@ def visualise(image,mask):
         .numpy()
     )
 
-    mask_to_show = (
-        mask
+    real_mask_to_show = (
+        real_mask
         .detach()
         .cpu()
         .squeeze(0)
         .numpy()
     )
 
-    plt.figure(figsize=(12, 5))
+    pred_mask_to_show = (
+        pred_mask
+        .detach()
+        .cpu()
+        .squeeze(0)
+        .numpy()
+    )
 
-    plt.subplot(1, 2, 1)
+    plt.figure(figsize=(18, 5))
+
+    plt.subplot(1, 3, 1)
     plt.imshow(image_to_show)
     plt.title("Image")
     plt.axis("off")
 
-    plt.subplot(1, 2, 2)
-    plt.imshow(mask_to_show, cmap="gray", vmin=0, vmax=1)
-    plt.title("Mask")
+    plt.subplot(1, 3, 2)
+    plt.imshow(
+        real_mask_to_show,
+        cmap="gray",
+        vmin=0,
+        vmax=1
+    )
+    plt.title("Ground Truth")
     plt.axis("off")
 
+    plt.subplot(1, 3, 3)
+    plt.imshow(
+        pred_mask_to_show,
+        cmap="gray",
+        vmin=0,
+        vmax=1
+    )
+    plt.title("Prediction")
+    plt.axis("off")
+
+    plt.tight_layout()
     plt.show()

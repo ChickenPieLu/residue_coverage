@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import utils
-import argparse
 from dataset import ResidueDataset
 from model import MiniUNet
 import subprocess
@@ -57,7 +56,7 @@ def evaluate(model, loader, criterion, device):
     )
 
 
-def main(args):
+def main():
     # use mps if available
     if torch.backends.mps.is_available():
         device = torch.device("mps")
@@ -71,102 +70,64 @@ def main(args):
     img_paths = [p + ".jpg" for p in file_names]
     mask_paths = [p + ".tif" for p in file_names]
 
-    # if training (default)
-    if not args.val:
-        dataset = ResidueDataset(img_paths, mask_paths)
-        print(f"Number of training pairs: {len(dataset)}")
+    dataset = ResidueDataset(img_paths, mask_paths)
+    print(f"Number of training pairs: {len(dataset)}")
 
-        loader = DataLoader(
-            dataset,
-            batch_size=4,
-            shuffle=True,
-            num_workers=0
-        )
-
-        model = MiniUNet().to(device)
-        criterion = nn.BCEWithLogitsLoss()
-        optimiser = optim.Adam(
-            model.parameters(),
-            lr = 0.001
-        )
-
-        for epoch in range(20):
-            print(f"epoch: {epoch}")
-
-            model.train()
-            total_loss = 0
-
-            for batch_index, (imgs, masks) in enumerate(loader):
-                imgs = imgs.to(device)
-                masks = masks.to(device)
-
-                optimiser.zero_grad()
-
-                output = model(imgs)
-                loss = criterion(output,masks)
-
-                loss.backward()
-                optimiser.step()
-
-                # (average loss of 1 img in batch) * (# of imgs in a batch)
-                total_loss += loss.item() * imgs.size(0) 
-
-                if batch_index % 20 == 0:
-                    print(f"batch {batch_index}/{len(loader)}")
-            
-            # avg loss of the full training set
-            avg_loss = total_loss/len(dataset)
-            print(f"Average loss: {avg_loss:.6f}\n")
-
-        print("Training set:")
-        evaluate(model, loader, criterion, device)
-        torch.save(
-            model.state_dict(),
-            "mini_unet_abc.pth"
-        )
-
-    # no training: read stored model
-    else:
-        model = MiniUNet().to(device)
-        model.load_state_dict(
-            torch.load(
-                "mini_unet_abc.pth",
-                map_location=device
-            )
-        )
-        criterion = nn.BCEWithLogitsLoss()
-        optimiser = optim.Adam(
-            model.parameters(),
-            lr = 0.001
-        )
-
-    # evaluate model on validation set
-    val_file_names = utils.read_file_names(['D'])
-    val_img_paths = [p + ".jpg" for p in val_file_names]
-    val_mask_paths = [p + ".tif" for p in val_file_names]
-
-    val_dataset = ResidueDataset(val_img_paths,val_mask_paths)
-    val_loader = DataLoader(
-        val_dataset,
-        batch_size= 4,
-        shuffle= False,
-        num_workers= 0
+    loader = DataLoader(
+        dataset,
+        batch_size=4,
+        shuffle=True,
+        num_workers=0
     )
 
-    print("Validation set D:")
-    evaluate(model, val_loader, criterion, device)
+    model = MiniUNet().to(device)
+    criterion = nn.BCEWithLogitsLoss()
+    optimiser = optim.Adam(
+        model.parameters(),
+        lr = 0.001
+    )
+
+    for epoch in range(20):
+        print(f"epoch: {epoch}")
+
+        model.train()
+        total_loss = 0
+
+        for batch_index, (imgs, masks) in enumerate(loader):
+            imgs = imgs.to(device)
+            masks = masks.to(device)
+
+            optimiser.zero_grad()
+
+            output = model(imgs)
+            loss = criterion(output,masks)
+
+            loss.backward()
+            optimiser.step()
+
+            # (average loss of 1 img in batch) * (# of imgs in a batch)
+            total_loss += loss.item() * imgs.size(0) 
+
+            if batch_index % 20 == 0:
+                print(f"batch {batch_index}/{len(loader)}")
+        
+        # avg loss of the full training set
+        avg_loss = total_loss/len(dataset)
+        print(f"Average loss: {avg_loss:.6f}\n")
+
+    print("Training set:")
+    evaluate(model, loader, criterion, device)
+    torch.save(
+        model.state_dict(),
+        "mini_unet_abc.pth"
+    )
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument("--val",action="store_true",default=False)
-    args = parser.parse_args()
-
-    main(args)
+    main()
 
     subprocess.run([
         "osascript",
         "-e",
-        'display notification "Model training completed" with title "Python"'
+        'display notification "main.py execution completed" with title "Python"'
     ])
