@@ -9,6 +9,7 @@ __pycache__/
 *.jpg
 *.jpeg
 *.tif
+*.zip
 
 *.pkl
 *.joblib

@@ -3,13 +3,18 @@ import cv2
 import torch
 import tifffile
 
-def read_file_names(directory):
-    full_path = "residue_background/"+directory
-    file_names = [
-        os.path.join(full_path,f[:-4]) for f in os.listdir(full_path)
-        if f.lower().endswith(".jpg")
-    ]
-    return file_names
+def read_file_names(directories):
+    all_imgs = []
+
+    for directory in directories:
+        full_path = os.path.join("residue_background", directory)
+        file_names = [
+            os.path.join(full_path,f[:-4]) for f in os.listdir(full_path)
+            if f.lower().endswith(".jpg")
+        ]
+        all_imgs.extend(file_names)
+        
+    return sorted(all_imgs)
 
 def jpg_read(path):
     img = cv2.imread(path)
