@@ -8,55 +8,7 @@ import utils
 from dataset import ResidueDataset
 from model import MiniUNet
 import subprocess
-
-def evaluate(model, loader, criterion, device):
-    model.eval()
-
-    total_loss = 0
-    total_intersection = 0
-    total_union = 0
-    total_predicted = 0
-    total_true = 0
-    total_pixels = 0
-    max_probability = 0
-
-    with torch.no_grad():
-        for imgs, masks in loader:
-            imgs = imgs.to(device)
-            masks = masks.to(device)
-
-            outputs = model(imgs)
-            loss = criterion(outputs, masks)
-
-            probabilities = torch.sigmoid(outputs)
-            preds = (probabilities > 0.5).float()
-
-            total_loss += loss.item() * imgs.size(0)
-            total_intersection += (preds * masks).sum().item()
-            total_union += ((preds + masks) > 0).float().sum().item()
-
-            total_predicted += preds.sum().item()
-            total_true += masks.sum().item()
-            total_pixels += masks.numel()
-
-            max_probability = max(
-                max_probability,
-                probabilities.max().item()
-            )
-
-    average_loss = total_loss / len(loader.dataset)
-    iou = total_intersection / (total_union + 1e-8)
-    pred_ratio = total_predicted / total_pixels
-    true_ratio = total_true / total_pixels
-
-    print(
-        f"loss={average_loss:.4f}, "
-        f"IoU={iou:.4f}, "
-        f"true_ratio={true_ratio:.4f}, "
-        f"pred_ratio={pred_ratio:.4f}, "
-        f"max_prob={max_probability:.4f}"
-    )
-    return iou
+from evaluate import evaluate
 
 def set_seed(seed):
     random.seed(seed)
@@ -64,12 +16,11 @@ def set_seed(seed):
     torch.manual_seed(seed)
 
 def main():
-
     # random seed to fix random process
     SEED = 114514
     set_seed(SEED)
-    generator = torch.Generator()
-    generator.manual_seed(SEED) # for dataloaders
+    train_generator = torch.Generator()
+    train_generator.manual_seed(SEED)
 
     # use mps if available
     if torch.backends.mps.is_available():
@@ -94,7 +45,7 @@ def main():
         batch_size=4,
         shuffle=True,
         num_workers=0,
-        generator=generator
+        generator=train_generator
     )
 
     # validation set loader
@@ -108,7 +59,6 @@ def main():
         batch_size= 4,
         shuffle= False,
         num_workers= 0,
-        generator=generator
     )
 
     # model
@@ -120,9 +70,17 @@ def main():
     )
 
     #training
-    best_val_iou = 0.0
+    best_val_iou = -1.0
+    best_epoch = -1
 
-    for epoch in range(40):
+    patience = 10
+    epochs_without_improvement = 0
+
+    checkpoint_path = (
+        "mini_unet_abc_bce_seed114514_train_generator.pth"
+    )
+
+    for epoch in range(50):
         print(f"\nEpoch {epoch}")
 
         model.train()
@@ -149,16 +107,49 @@ def main():
         print("Validation on D:")
         val_iou = evaluate(model,val_loader,criterion,device)
 
+        # patience and early stop due to non-improvment
         if val_iou > best_val_iou:
-            print("(best iou so far)")
             best_val_iou = val_iou
+            best_epoch = epoch
+            epochs_without_improvement = 0
+
             torch.save(
                 model.state_dict(),
-                "mini_unet_abc.pth"
+                checkpoint_path
             )
 
-    print("\nTraining set:")
+            print(
+                f"(best IoU so far: {best_val_iou:.4f}, "
+                f"epoch {best_epoch})"
+            )
+
+        else:
+            epochs_without_improvement += 1
+            print(
+                f"No improvement for "
+                f"{epochs_without_improvement}/{patience} epochs"
+            )
+
+        if epochs_without_improvement >= patience:
+            print(
+                f"Early stopping. Best epoch: {best_epoch}, "
+                f"best IoU: {best_val_iou:.4f}"
+            )
+            break
+
+    # final evaluation
+    model.load_state_dict(
+        torch.load(
+            checkpoint_path,
+            map_location=device
+        )
+    )
+
+    print("\nBest model on training set:")
     evaluate(model, loader, criterion, device)
+
+    print("\nBest model on validation set D:")
+    evaluate(model, val_loader, criterion, device)
 
 if __name__ == "__main__":
     main()
