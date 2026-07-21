@@ -10,6 +10,28 @@ from model import MiniUNet
 import subprocess
 from evaluate import evaluate
 
+def dice_loss(logits, targets, smooth=1.0):
+    probabilities = torch.sigmoid(logits)
+
+    dimensions = tuple(range(1, probabilities.ndim))
+
+    intersection = (
+        probabilities * targets
+    ).sum(dim=dimensions)
+
+    total = (
+        probabilities.sum(dim=dimensions)
+        + targets.sum(dim=dimensions)
+    )
+
+    dice = (
+        2.0 * intersection + smooth
+    ) / (
+        total + smooth
+    )
+
+    return 1.0 - dice.mean()
+
 def set_seed(seed):
     random.seed(seed)
     np.random.seed(seed)
@@ -17,7 +39,7 @@ def set_seed(seed):
 
 def main():
     # random seed to fix random process
-    SEED = 114514
+    SEED = 42
     set_seed(SEED)
     train_generator = torch.Generator()
     train_generator.manual_seed(SEED)
@@ -63,11 +85,17 @@ def main():
 
     # model
     model = MiniUNet().to(device)
-    criterion = nn.BCEWithLogitsLoss()
+    bce_criterion = nn.BCEWithLogitsLoss()
     optimiser = optim.Adam(
         model.parameters(),
         lr = 0.001
     )
+
+    def combined_loss(logits, targets):
+        bce = bce_criterion(logits, targets)
+        dice = dice_loss(logits, targets)
+
+        return bce + dice
 
     #training
     best_val_iou = -1.0
@@ -77,7 +105,7 @@ def main():
     epochs_without_improvement = 0
 
     checkpoint_path = (
-        "mini_unet_abc_bce_seed114514_train_generator.pth"
+        "mini_unet_abc_bce+dice_seed42_train_generator.pth"
     )
 
     for epoch in range(50):
@@ -85,6 +113,8 @@ def main():
 
         model.train()
         total_loss = 0
+        total_bce = 0
+        total_dice = 0
 
         for batch_index, (imgs, masks) in enumerate(loader):
             imgs = imgs.to(device)
@@ -92,20 +122,30 @@ def main():
 
             optimiser.zero_grad()
 
-            output = model(imgs)
-            loss = criterion(output,masks)
+            outputs = model(imgs)
+            bce = bce_criterion(outputs, masks)
+            dice = dice_loss(outputs, masks)
+            loss = bce + dice
 
             loss.backward()
             optimiser.step()
 
-            # (average loss of 1 img in batch) * (# of imgs in a batch)
-            total_loss += loss.item() * imgs.size(0) 
+            batch_size = imgs.size(0)
+
+            total_loss += loss.item() * batch_size
+            total_bce += bce.item() * batch_size
+            total_dice += dice.item() * batch_size
         
-        # avg loss of the full training set
-        avg_loss = total_loss/len(dataset)
-        print(f"Average loss: {avg_loss:.6f}")
-        print("Validation on D:")
-        val_iou = evaluate(model,val_loader,criterion,device)
+        # loss print
+        dataset_size = len(loader.dataset)
+        print(
+            f"Average loss: {total_loss / dataset_size:.6f}, "
+            f"BCE: {total_bce / dataset_size:.6f}, "
+            f"Dice loss: {total_dice / dataset_size:.6f}"
+        )
+
+        #evaluation print
+        val_iou = evaluate(model,val_loader,combined_loss,device)
 
         # patience and early stop due to non-improvment
         if val_iou > best_val_iou:
@@ -146,10 +186,10 @@ def main():
     )
 
     print("\nBest model on training set:")
-    evaluate(model, loader, criterion, device)
+    evaluate(model, loader, combined_loss, device)
 
     print("\nBest model on validation set D:")
-    evaluate(model, val_loader, criterion, device)
+    evaluate(model, val_loader, combined_loss, device)
 
 if __name__ == "__main__":
     main()

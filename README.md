@@ -1,9 +1,9 @@
-# residue coverage in the cornfield
+# Residue Coverage in the Cornfield
 
-## U-Net Baseline
+## U-Net Experiments
 
-This experiment establishes the first reproducible U-Net baseline for crop
-residue segmentation and coverage estimation.
+This document records the development and evaluation of a U-Net model for
+crop residue segmentation and coverage estimation.
 
 ### Task
 
@@ -24,16 +24,17 @@ The dataset was split by location rather than by randomly mixing images:
 - Final test set: location E (kept completely unseen)
 
 This is a cross-location evaluation: the model is trained on images from
-several locations and validated on a different location.
+several locations and validated on a different location. Location D is used
+for early stopping and model selection, so it is treated as a validation set
+rather than a completely unbiased final test set.
 
-### Baseline Configuration
+### Shared Experimental Configuration
 
 | Setting | Value |
 |---|---|
 | Model | Mini U-Net |
 | Input | RGB image |
 | Output | Single-channel segmentation logits |
-| Loss function | Binary Cross-Entropy with Logits |
 | Optimizer | Adam |
 | Learning rate | 0.01 |
 | Batch size | 4 |
@@ -45,11 +46,19 @@ several locations and validated on a different location.
 | Early-stopping patience | 10 epochs |
 | Model-selection metric | Validation IoU |
 
-The best checkpoint was selected using IoU on validation location D.
-Location E was not used for training, model selection or hyperparameter
-tuning.
+The best checkpoint in each experiment was selected using IoU on validation
+location D. Location E was not used for training, model selection or
+hyperparameter tuning.
 
-### Baseline Results
+## Experiment 1: BCE Baseline
+
+### Loss Function
+
+The baseline uses binary cross-entropy with logits:
+
+`BCEWithLogitsLoss`
+
+### Results
 
 The best checkpoint was obtained at epoch 24. Training stopped at epoch 34
 after 10 consecutive epochs without improvement.
@@ -62,9 +71,9 @@ after 10 consecutive epochs without improvement.
 ### Interpretation
 
 The baseline achieves an IoU of `0.5168` and a Dice score of `0.6814` on
-the unseen validation location D. This indicates that the model has learned
-features that generalise across locations, although a performance gap remains
-between the training and validation sets.
+validation location D. This indicates that the model has learned features
+that generalise across locations, although a performance gap remains between
+the training and validation sets.
 
 Validation recall (`0.7260`) is higher than precision (`0.6420`). Therefore,
 the model detects most labelled residue pixels but also classifies some
@@ -82,8 +91,8 @@ The training and validation IoU difference is:
 `0.6341 - 0.5168 = 0.1173`
 
 This suggests moderate cross-location generalisation error, leaving room for
-improvement through better loss functions, data augmentation and model
-development.
+improvement through better loss functions, data augmentation and additional
+cross-location data.
 
 ### Reproducibility
 
@@ -92,16 +101,158 @@ DataLoader produced nearly the same best validation IoU as the previous run
 (`0.5168` versus `0.5183`). The reproducible result of `0.5168` is used as
 the official BCE baseline.
 
-### Planned Experiments
+## Experiment 2: BCE + Dice Loss
 
-Future experiments will change one component at a time while keeping the
-same data split and evaluation procedure:
+### Motivation and Loss Function
 
-1. BCE + Dice loss
-2. Data augmentation
-3. Learning-rate adjustment or scheduling
-4. Model architecture improvements
-5. Prediction-threshold analysis
+The second experiment tests whether directly optimising the overlap between
+the predicted and true masks improves segmentation performance. The loss is
+an unweighted sum of BCE and soft Dice loss:
 
-All experiments will continue to use location D for validation. Location E
-will remain untouched until the final model configuration has been selected.
+`total loss = BCE loss + Dice loss`
+
+BCE supervises each pixel independently, while Dice loss gives greater
+emphasis to the overlap of the complete predicted residue region with the
+ground-truth region.
+
+All other settings, including the data split, random seed, optimiser,
+learning rate, batch size, threshold and early-stopping procedure, were kept
+the same as in the BCE baseline.
+
+### Training Behaviour
+
+At epoch 0, the model predicted only background on location D, producing an
+IoU of `0.0000`. Validation IoU then increased rapidly to `0.4195` by epoch 4
+and continued to improve more slowly. New best checkpoints were obtained at
+epochs 9, 10, 13, 16, 20 and 25.
+
+The best validation IoU was obtained at epoch 25. Training stopped at epoch
+35 after 10 consecutive epochs without improvement. After epoch 25, the
+training loss continued to fluctuate around a gradually declining level, but
+validation IoU remained approximately between `0.46` and `0.52`, indicating
+that additional training was not producing a consistent improvement in
+cross-location generalisation.
+
+### Results
+
+| Dataset | Total loss | IoU | Dice | Precision | Recall | Coverage MAE | True coverage | Predicted coverage |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Training (A/B/C) | 0.5276 | 0.6517 | 0.7892 | 0.7991 | 0.7795 | 0.0367 | 22.61% | 22.06% |
+| Validation (D) | 0.8274 | 0.5163 | 0.6810 | 0.6332 | 0.7367 | 0.0521 | 22.25% | 25.89% |
+
+At the best epoch, the final training-batch averages reported during training
+were approximately:
+
+| Component | Value |
+|---|---:|
+| BCE loss | 0.2480 |
+| Dice loss | 0.3065 |
+| Total loss | 0.5546 |
+
+These batch-averaged values are included only to show the relative
+contribution of the two loss components during training. The checkpoint
+metrics above were calculated by evaluating the saved best model over the
+complete datasets.
+
+### Interpretation
+
+The BCE + Dice model achieves a validation IoU of `0.5163`, which is almost
+identical to the BCE baseline IoU of `0.5168`. Dice score is also essentially
+unchanged (`0.6810` versus `0.6814`). Therefore, this experiment provides no
+evidence that adding Dice loss materially improves cross-location
+segmentation under the current configuration.
+
+Compared with BCE alone, BCE + Dice produces slightly lower precision and
+slightly higher recall. It predicts more residue on location D, increasing
+aggregate predicted coverage from `25.16%` to `25.89%`. The per-image coverage
+MAE improves only marginally, from `5.27` to `5.21` percentage points.
+
+The BCE + Dice training and validation IoU difference is:
+
+`0.6517 - 0.5163 = 0.1354`
+
+This is larger than the BCE baseline gap of `0.1173`. The combination of a
+higher training IoU and unchanged validation IoU suggests that the main
+remaining limitation is generalisation to a new location rather than an
+inability to fit the training data.
+
+The absolute loss values from the two experiments must not be compared
+directly. The BCE + Dice loss is the sum of two terms, so a total loss around
+`0.5` does not imply that the model is undertrained, nor does it mean that it
+has a fixed amount of improvement remaining. Overfitting is assessed using
+the training-validation performance gap and the validation trend, not by how
+close the training loss is to zero.
+
+## Comparison of Loss Functions
+
+| Validation metric | BCE | BCE + Dice | Change |
+|---|---:|---:|---:|
+| IoU | 0.5168 | 0.5163 | -0.0005 |
+| Dice | 0.6814 | 0.6810 | -0.0004 |
+| Precision | 0.6420 | 0.6332 | -0.0088 |
+| Recall | 0.7260 | 0.7367 | +0.0107 |
+| Coverage MAE | 0.0527 | 0.0521 | -0.0006 |
+| Predicted coverage | 25.16% | 25.89% | +0.73 pp |
+
+The observed differences are extremely small and could be caused by normal
+training variation. A multi-seed comparison would be required to make a
+strong claim about which loss is better. For the present project, the main
+conclusion is that replacing BCE with an unweighted BCE + Dice objective did
+not overcome the cross-location generalisation bottleneck.
+
+## Current Conclusion and Wrap-up Plan
+
+The project has now established a reproducible U-Net training and evaluation
+pipeline with:
+
+1. location-based training, validation and test splits;
+2. deterministic random seeds and DataLoader shuffling;
+3. IoU-based checkpoint selection and early stopping;
+4. IoU, Dice, precision, recall and coverage-error evaluation;
+5. a reproducible BCE baseline;
+6. a controlled BCE + Dice loss comparison.
+
+Simply increasing the maximum epoch count is unlikely to provide a meaningful
+improvement. The BCE + Dice run already shows a training-validation gap, and
+validation IoU stopped improving consistently after epoch 25 even though the
+training objective continued to decrease. Increasing patience slightly could
+allow for more validation fluctuation, but it would not address the main
+cross-location limitation.
+
+The most valuable source of further improvement would be additional real data
+from a wider range of locations, soil colours, lighting conditions, residue
+types and camera conditions. Since such data is not currently available, the
+remaining training work will be limited to one controlled data-augmentation
+experiment.
+
+### Final Planned Experiment
+
+The final experiment will use modest transformations that preserve the
+segmentation labels:
+
+- random horizontal flipping;
+- random vertical flipping;
+- random rotation by 0, 90, 180 or 270 degrees;
+- optionally, small brightness and contrast adjustments applied only to the
+  RGB image.
+
+The image and mask must receive exactly the same geometric transformation.
+Colour or brightness transformations must be applied only to the image.
+
+Data augmentation cannot create genuinely new locations or soil and lighting
+conditions, so only a small improvement is expected. A plausible improvement
+range is approximately `0.00–0.04` IoU, and no improvement is also possible.
+The purpose of this final experiment is to test whether simple invariances
+reduce overfitting, rather than to begin an extensive new tuning cycle.
+
+After this experiment, development will move to project wrap-up:
+
+1. compare the Random Forest, BCE U-Net, BCE + Dice U-Net and augmented U-Net;
+2. visualise representative successful and failed predictions;
+3. analyse cross-location failure cases and coverage-estimation errors;
+4. document limitations and possible future work;
+5. evaluate the selected final configuration once on untouched location E.
+
+Location E must remain untouched until the final model configuration has been
+selected. Its result will be reported as the final held-out test result and
+must not be used for further hyperparameter tuning.
