@@ -2,8 +2,9 @@ import torch
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
-from dataset import ResidueDataset
-from model import MiniUNet
+from legacy.unet import utils
+from legacy.unet.dataset import ResidueDataset
+from legacy.unet.model import MiniUNet
 
 
 def visualise_e():
@@ -19,7 +20,7 @@ def visualise_e():
     model = MiniUNet().to(device)
     model.load_state_dict(
         torch.load(
-            "mini_unet_abc_bce+dice_seed42_train_generator.pth",
+            utils.DEFAULT_CHECKPOINT,
             map_location=device
         )
     )
@@ -29,15 +30,15 @@ def visualise_e():
     cases = [
         {
             "name": "Successful case",
-            "file": "residue_background/E/IMG_0937_part06"
+            "file": str(utils.DATA_ROOT / "E" / "IMG_0937_part06")
         },
         {
             "name": "Typical case",
-            "file": "residue_background/E/IMG_0944_part11"
+            "file": str(utils.DATA_ROOT / "E" / "IMG_0944_part11")
         },
         {
             "name": "High-coverage underestimation",
-            "file": "residue_background/E/IMG_0946_part04"
+            "file": str(utils.DATA_ROOT / "E" / "IMG_0946_part04")
         }
     ]
 

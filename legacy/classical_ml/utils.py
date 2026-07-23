@@ -1,29 +1,53 @@
-import os
+from pathlib import Path
+
 import tifffile
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
 import argparse
-from natsort import natsorted
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DATA_ROOT = PROJECT_ROOT / "residue_background"
+DEFAULT_MODEL_PATH = Path(__file__).resolve().parent / "residue_rf_model.joblib"
 
 # 路径读取
 def read_paths(dirs):
-    img_paths, mask_paths = [],[]
-    for d in dirs:
-        temp_img = [
-            os.path.join(d, f)for f in os.listdir(d)
-            if f.lower().endswith(".jpg")
-        ]
-        temp_mask = [
-            os.path.join(d, f) for f in os.listdir(d)
-            if f.lower().endswith(".tif")
-        ]
-        if len(temp_img)!=len(temp_mask):
-            raise ValueError(d+"中图片和mask数量不匹配")
-        
-        img_paths.extend(natsorted(temp_img))
-        mask_paths.extend(natsorted(temp_mask))
+    """Return image/mask paths paired by stem, independent of working directory."""
+    img_paths, mask_paths = [], []
+    for directory in dirs:
+        directory = Path(directory)
+        if len(directory.parts) == 1 and directory.name.upper() in "ABCDE":
+            directory = DATA_ROOT / directory.name.upper()
+        elif not directory.is_absolute():
+            directory = PROJECT_ROOT / directory
+
+        images = {path.stem: path for path in directory.glob("*.jpg")}
+        masks = {path.stem: path for path in directory.glob("*.tif")}
+        missing_masks = sorted(images.keys() - masks.keys())
+        missing_images = sorted(masks.keys() - images.keys())
+        if missing_masks or missing_images:
+            raise ValueError(
+                f"{directory} 中图片和 mask 无法按文件名配对；"
+                f"缺少 mask: {missing_masks[:3]}，"
+                f"缺少图片: {missing_images[:3]}"
+            )
+
+        for stem in sorted(images):
+            img_paths.append(str(images[stem]))
+            mask_paths.append(str(masks[stem]))
+
     return img_paths, mask_paths
+
+
+def location_dirs(locations):
+    return [DATA_ROOT / location.upper() for location in locations]
+
+
+def display_name(path):
+    path = Path(path)
+    try:
+        return str(path.relative_to(PROJECT_ROOT).with_suffix(""))
+    except ValueError:
+        return str(path.with_suffix(""))
 
 # 图片读取
 def tiff_read(path):
@@ -62,6 +86,8 @@ def coloured_mask(mask):
 
 # 展示
 def show_plt(img):
+    import matplotlib.pyplot as plt
+
     plt.figure(figsize=(10, 8))
     plt.imshow(img)
     plt.axis("off")
@@ -116,11 +142,11 @@ def process_seq(seq):
         d = seq_list[i]
         if d not in allowed:
             raise ValueError(seq+" 只能包含A,B,C,D")
-        train_dir.append("residue_background/" + d)
+        train_dir.append(DATA_ROOT / d)
     
     test = seq_list[length-1]
     if test not in allowed:
             raise ValueError(seq+" 只能包含A,B,C,D")
-    test_dir = ["residue_background/"+test,]
+    test_dir = [DATA_ROOT / test]
     
     return train_dir,test_dir

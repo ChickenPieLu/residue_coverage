@@ -1,5 +1,37 @@
 # Residue Coverage in the Cornfield
 
+## Project Layout and Commands
+
+Both historical approaches now live under `legacy/` and use the same
+location-based split:
+
+- training: `A`, `B`, `C`
+- validation: `D`
+- final test: `E`
+
+The Mini U-Net code is in `legacy/unet/`:
+
+```bash
+python -m legacy.unet.main
+python -m legacy.unet.test
+python -m legacy.unet.visualiseE
+```
+
+The Random Forest code is in `legacy/classical_ml/`. Its default training
+command trains on A/B/C and validates on D; the test command evaluates only
+the unseen E images:
+
+```bash
+python -m legacy.classical_ml.training
+python -m legacy.classical_ml.test
+python -m legacy.classical_ml.visualiseE
+```
+
+Both visualisation scripts use the same three E cases, so their masks and
+coverage errors can be compared directly. The Random Forest keeps its
+historical probability threshold of `0.60`; it can be overridden with
+`--threshold`.
+
 ## U-Net Experiments
 
 This document records the development and evaluation of a U-Net model for

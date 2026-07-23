@@ -1,5 +1,6 @@
 from torch.utils.data import Dataset
-import utils
+
+from legacy.unet import utils
 
 class ResidueDataset(Dataset):
     def __init__(self, img_paths, mask_paths):

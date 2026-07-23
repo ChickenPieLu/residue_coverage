@@ -1,11 +1,11 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-import main
-import utils
-from dataset import ResidueDataset
-from model import MiniUNet
-from evaluate import evaluate
+
+from legacy.unet import main, utils
+from legacy.unet.dataset import ResidueDataset
+from legacy.unet.evaluate import evaluate
+from legacy.unet.model import MiniUNet
 
 def test():
     # use mps if available
@@ -18,7 +18,7 @@ def test():
     model = MiniUNet().to(device)
     model.load_state_dict(
         torch.load(
-            "mini_unet_abc_bce+dice_seed42_train_generator.pth",
+            utils.DEFAULT_CHECKPOINT,
             map_location=device
         )
     )

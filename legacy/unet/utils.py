@@ -1,15 +1,24 @@
 import os
+from pathlib import Path
+
 import cv2
 import torch
 import tifffile
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DATA_ROOT = PROJECT_ROOT / "residue_background"
+DEFAULT_CHECKPOINT = (
+    Path(__file__).resolve().parent
+    / "mini_unet_abc_bce+dice_seed42_train_generator.pth"
+)
 
 def read_file_names(directories):
     all_imgs = []
 
     for directory in directories:
-        full_path = os.path.join("residue_background", directory)
+        full_path = DATA_ROOT / directory
         file_names = [
-            os.path.join(full_path,f[:-4]) for f in os.listdir(full_path)
+            str(full_path / f[:-4]) for f in os.listdir(full_path)
             if f.lower().endswith(".jpg")
         ]
         all_imgs.extend(file_names)

@@ -4,7 +4,6 @@ import joblib
 import legacy.classical_ml.utils as utils #utils.py
 import time
 import argparse
-import subprocess
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
     classification_report,
@@ -107,13 +106,13 @@ def print_segmentation_metrics(y_true, y_pred):
 def main(args):
     seed = 114514
     np.random.seed(seed)
-    training_dirs,test_dirs = utils.process_seq(args.seq)
+    training_dirs, validation_dirs = utils.process_seq(args.seq)
 
     print("训练：")
     for d in training_dirs:
         print(d)
-    print("测试：")
-    for d in test_dirs:
+    print("验证：")
+    for d in validation_dirs:
         print(d)
     print("训练用特征：")
     feature_list = []
@@ -127,11 +126,11 @@ def main(args):
     else: print(str(feature_list))
 
     train_img_dir, train_mask_dir = utils.read_paths(training_dirs)
-    test_img_dir, test_mask_dir = utils.read_paths(test_dirs)
+    val_img_dir, val_mask_dir = utils.read_paths(validation_dirs)
 
     if len(train_img_dir) != len(train_mask_dir):
         raise ValueError("训练集图片和mask数量不匹配")
-    if len(test_img_dir) != len(test_mask_dir):
+    if len(val_img_dir) != len(val_mask_dir):
         raise ValueError("验证集图片和mask数量不匹配")
     
     train_features, train_labels = [],[]
@@ -181,13 +180,13 @@ def main(args):
         "area":args.area,
         },
     }
-    joblib.dump(model_bundle, "residue_rf_model.joblib")
+    joblib.dump(model_bundle, args.model)
 
     print("训练结果：")
     all_true = []
     all_probability = []
 
-    for img_path, mask_path in zip(test_img_dir, test_mask_dir):
+    for img_path, mask_path in zip(val_img_dir, val_mask_dir):
         img = utils.jpg_read(img_path)
         mask = utils.tiff_read(mask_path).astype(np.uint8)
 
@@ -223,6 +222,11 @@ if __name__ == "__main__":
     parser.add_argument("--lab",action="store_true", default=False)
     parser.add_argument("--threshold",action="store_true", default=False)
     parser.add_argument("--seq",type=str,default="ABCD")
+    parser.add_argument(
+        "--model",
+        default=utils.DEFAULT_MODEL_PATH,
+        help="训练后模型的保存路径",
+    )
     parser.add_argument("--area",type=int,choices=range(1,50),default=15)
     parser.add_argument(
         "--neg",
@@ -233,9 +237,3 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     main(args)
-
-    subprocess.run([
-        "osascript",
-        "-e",
-        'display notification "Model training completed" with title "Python"'
-    ])

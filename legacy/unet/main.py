@@ -4,11 +4,11 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 import numpy as np
 import random
-import utils
-from dataset import ResidueDataset
-from model import MiniUNet
+from legacy.unet import utils
+from legacy.unet.dataset import ResidueDataset
+from legacy.unet.model import MiniUNet
 import subprocess
-from evaluate import evaluate
+from legacy.unet.evaluate import evaluate
 
 def dice_loss(logits, targets, smooth=1.0):
     probabilities = torch.sigmoid(logits)
@@ -104,9 +104,7 @@ def main():
     patience = 10
     epochs_without_improvement = 0
 
-    checkpoint_path = (
-        "mini_unet_abc_bce+dice_seed42_train_generator.pth"
-    )
+    checkpoint_path = utils.DEFAULT_CHECKPOINT
 
     for epoch in range(50):
         print(f"\nEpoch {epoch}")
