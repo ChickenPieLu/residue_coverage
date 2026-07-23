@@ -1,0 +1,201 @@
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader
+import numpy as np
+import random
+import utils
+from dataset import ResidueDataset
+from model import MODEL_NAME, make_model
+import subprocess
+from evaluate import evaluate
+
+def dice_loss(logits, targets, smooth=1.0):
+    probabilities = torch.sigmoid(logits)
+
+    dimensions = tuple(range(1, probabilities.ndim))
+
+    intersection = (
+        probabilities * targets
+    ).sum(dim=dimensions)
+
+    total = (
+        probabilities.sum(dim=dimensions)
+        + targets.sum(dim=dimensions)
+    )
+
+    dice = (
+        2.0 * intersection + smooth
+    ) / (
+        total + smooth
+    )
+
+    return 1.0 - dice.mean()
+
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+def main():
+    # random seed to fix random process
+    SEED = 42
+    set_seed(SEED)
+    train_generator = torch.Generator()
+    train_generator.manual_seed(SEED)
+
+    # use mps if available
+    if torch.backends.mps.is_available():
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
+    print("Using device:", device)
+
+
+    # training set loader
+    training_dirs = ['A','B','C']
+    file_names = utils.read_file_names(training_dirs)
+
+    img_paths = [p + ".jpg" for p in file_names]
+    mask_paths = [p + ".tif" for p in file_names]
+
+    dataset = ResidueDataset(img_paths, mask_paths)
+    print(f"Number of training pairs: {len(dataset)}")
+
+    loader = DataLoader(
+        dataset,
+        batch_size=4,
+        shuffle=True,
+        num_workers=0,
+        generator=train_generator
+    )
+
+    # validation set loader
+    val_file_names = utils.read_file_names(['D'])
+    val_img_paths = [p + ".jpg" for p in val_file_names]
+    val_mask_paths = [p + ".tif" for p in val_file_names]
+
+    val_dataset = ResidueDataset(val_img_paths,val_mask_paths)
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size= 4,
+        shuffle= False,
+        num_workers= 0,
+    )
+
+    # model
+    model = make_model().to(device)
+    print("Model:", MODEL_NAME)
+    bce_criterion = nn.BCEWithLogitsLoss()
+    optimiser = optim.Adam(
+        model.parameters(),
+        lr = 1e-4
+    )
+
+    def combined_loss(logits, targets):
+        bce = bce_criterion(logits, targets)
+        dice = dice_loss(logits, targets)
+
+        return bce + dice
+
+    #training
+    best_val_iou = -1.0
+    best_epoch = -1
+
+    patience = 10
+    epochs_without_improvement = 0
+
+    checkpoint_path = utils.DEFAULT_CHECKPOINT
+    print("Checkpoint:", checkpoint_path)
+
+    for epoch in range(50):
+        print(f"\nEpoch {epoch}")
+
+        model.train()
+        total_loss = 0
+        total_bce = 0
+        total_dice = 0
+
+        for batch_index, (imgs, masks) in enumerate(loader):
+            imgs = imgs.to(device)
+            masks = masks.to(device)
+
+            optimiser.zero_grad()
+
+            outputs = model(imgs)
+            bce = bce_criterion(outputs, masks)
+            dice = dice_loss(outputs, masks)
+            loss = bce + dice
+
+            loss.backward()
+            optimiser.step()
+
+            batch_size = imgs.size(0)
+
+            total_loss += loss.item() * batch_size
+            total_bce += bce.item() * batch_size
+            total_dice += dice.item() * batch_size
+        
+        # loss print
+        dataset_size = len(loader.dataset)
+        print(
+            f"Average loss: {total_loss / dataset_size:.6f}, "
+            f"BCE: {total_bce / dataset_size:.6f}, "
+            f"Dice loss: {total_dice / dataset_size:.6f}"
+        )
+
+        #evaluation print
+        val_iou = evaluate(model,val_loader,combined_loss,device)
+
+        # patience and early stop due to non-improvment
+        if val_iou > best_val_iou:
+            best_val_iou = val_iou
+            best_epoch = epoch
+            epochs_without_improvement = 0
+
+            torch.save(
+                model.state_dict(),
+                checkpoint_path
+            )
+
+            print(
+                f"(best IoU so far: {best_val_iou:.4f}, "
+                f"epoch {best_epoch})"
+            )
+
+        else:
+            epochs_without_improvement += 1
+            print(
+                f"No improvement for "
+                f"{epochs_without_improvement}/{patience} epochs"
+            )
+
+        if epochs_without_improvement >= patience:
+            print(
+                f"Early stopping. Best epoch: {best_epoch}, "
+                f"best IoU: {best_val_iou:.4f}"
+            )
+            break
+
+    # final evaluation
+    model.load_state_dict(
+        torch.load(
+            checkpoint_path,
+            map_location=device
+        )
+    )
+
+    print("\nBest model on training set:")
+    evaluate(model, loader, combined_loss, device)
+
+    print("\nBest model on validation set D:")
+    evaluate(model, val_loader, combined_loss, device)
+
+if __name__ == "__main__":
+    main()
+
+    subprocess.run([
+        "osascript",
+        "-e",
+        'display notification "main.py execution completed" with title "Python"'
+    ])

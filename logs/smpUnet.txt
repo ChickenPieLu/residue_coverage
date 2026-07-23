@@ -1,0 +1,205 @@
+Last login: Thu Jul 23 17:42:58 on ttys001
+chickenpielu@bogon ~ % cd Projects/work/residue_coverage 
+chickenpielu@bogon residue_coverage % ls
+__pycache__
+dataset.py
+evaluate.py
+images_512.zip
+legacy
+logs
+main.py
+model.py
+README.md
+requirements.txt
+residue_background
+smp_unet_resnet34_imagenet_abc_bce_dice_seed42.pth
+test.py
+utils.py
+visualiseE.py
+chickenpielu@bogon residue_coverage % source .venv/bin/activate
+(.venv) chickenpielu@bogon residue_coverage % clear
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(.venv) chickenpielu@bogon residue_coverage % python test.py
+Using device: mps
+testing set E:
+loss=0.5401, IoU=0.8260, Dice=0.9047, Precision=0.9051, Recall=0.9043, Coverage_MAE=0.0771, true_ratio=0.8470, pred_ratio=0.8463, max_prob=1.0000
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0937_part01: IoU=0.8034, true=0.7717, pred=0.8931, error=0.1214
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0937_part02: IoU=0.8532, true=0.8071, pred=0.8942, error=0.0871
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0937_part03: IoU=0.8370, true=0.8079, pred=0.8630, error=0.0550
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0937_part04: IoU=0.8163, true=0.7742, pred=0.8018, error=0.0276
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0937_part05: IoU=0.8707, true=0.8401, pred=0.9308, error=0.0907
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0937_part06: IoU=0.8811, true=0.8627, pred=0.9176, error=0.0549
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0937_part07: IoU=0.8194, true=0.8038, pred=0.8532, error=0.0494
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0937_part08: IoU=0.7737, true=0.7567, pred=0.7820, error=0.0253
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0937_part09: IoU=0.8902, true=0.8638, pred=0.9415, error=0.0777
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0937_part10: IoU=0.8736, true=0.8440, pred=0.9044, error=0.0603
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0937_part11: IoU=0.8061, true=0.7832, pred=0.8039, error=0.0207
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0937_part12: IoU=0.7950, true=0.7776, pred=0.8023, error=0.0247
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0937_part13: IoU=0.7970, true=0.7747, pred=0.9336, error=0.1589
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0937_part14: IoU=0.8282, true=0.8113, pred=0.8967, error=0.0854
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0937_part15: IoU=0.7205, true=0.5941, pred=0.6530, error=0.0589
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0937_part16: IoU=0.7899, true=0.7536, pred=0.8295, error=0.0758
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0938_part01: IoU=0.7222, true=0.6957, pred=0.8903, error=0.1945
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0938_part02: IoU=0.7592, true=0.7380, pred=0.8759, error=0.1379
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0938_part03: IoU=0.7798, true=0.7608, pred=0.8947, error=0.1340
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0938_part04: IoU=0.6894, true=0.6488, pred=0.8475, error=0.1986
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0938_part05: IoU=0.6570, true=0.6169, pred=0.8900, error=0.2731
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0938_part06: IoU=0.6936, true=0.6646, pred=0.8703, error=0.2057
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0938_part07: IoU=0.7334, true=0.7179, pred=0.8396, error=0.1217
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0938_part08: IoU=0.6791, true=0.6227, pred=0.8239, error=0.2012
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0938_part09: IoU=0.7226, true=0.7014, pred=0.9336, error=0.2321
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0938_part10: IoU=0.7496, true=0.7299, pred=0.8953, error=0.1654
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0938_part11: IoU=0.7168, true=0.6951, pred=0.8482, error=0.1531
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0938_part12: IoU=0.7090, true=0.6728, pred=0.7776, error=0.1048
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0938_part13: IoU=0.7227, true=0.6921, pred=0.8897, error=0.1975
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0938_part14: IoU=0.7703, true=0.7502, pred=0.9021, error=0.1519
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0938_part15: IoU=0.7293, true=0.7209, pred=0.8305, error=0.1096
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0938_part16: IoU=0.6761, true=0.6403, pred=0.7589, error=0.1186
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0939_part01: IoU=0.8296, true=0.8034, pred=0.9058, error=0.1023
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0939_part02: IoU=0.8995, true=0.8852, pred=0.9493, error=0.0641
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0939_part03: IoU=0.8250, true=0.7823, pred=0.8658, error=0.0835
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0939_part04: IoU=0.7616, true=0.7384, pred=0.8153, error=0.0769
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0939_part05: IoU=0.8272, true=0.7972, pred=0.9080, error=0.1108
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0939_part06: IoU=0.8267, true=0.7931, pred=0.8635, error=0.0704
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0939_part07: IoU=0.8356, true=0.8292, pred=0.8247, error=0.0045
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0939_part08: IoU=0.6970, true=0.6857, pred=0.7366, error=0.0509
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0939_part09: IoU=0.7756, true=0.7507, pred=0.8660, error=0.1153
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0939_part10: IoU=0.8337, true=0.8169, pred=0.8755, error=0.0586
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0939_part11: IoU=0.8693, true=0.8511, pred=0.8715, error=0.0205
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0939_part12: IoU=0.7890, true=0.7546, pred=0.8582, error=0.1035
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0939_part13: IoU=0.6715, true=0.6232, pred=0.8335, error=0.2103
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0939_part14: IoU=0.7996, true=0.7954, pred=0.8206, error=0.0252
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0939_part15: IoU=0.8235, true=0.8206, pred=0.8840, error=0.0634
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0939_part16: IoU=0.7773, true=0.7394, pred=0.8695, error=0.1300
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0940_part01: IoU=0.8454, true=0.8677, pred=0.8523, error=0.0154
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0940_part02: IoU=0.9079, true=0.9151, pred=0.9393, error=0.0242
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0940_part03: IoU=0.8696, true=0.8908, pred=0.8932, error=0.0024
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0940_part04: IoU=0.7710, true=0.8182, pred=0.7645, error=0.0537
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0940_part05: IoU=0.8445, true=0.8435, pred=0.8580, error=0.0145
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0940_part06: IoU=0.8793, true=0.8953, pred=0.9175, error=0.0221
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0940_part07: IoU=0.7993, true=0.8473, pred=0.7815, error=0.0658
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0940_part08: IoU=0.7896, true=0.8305, pred=0.7627, error=0.0678
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0940_part09: IoU=0.8988, true=0.9103, pred=0.9286, error=0.0183
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0940_part10: IoU=0.8832, true=0.8907, pred=0.9002, error=0.0095
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0940_part11: IoU=0.8264, true=0.8513, pred=0.8207, error=0.0306
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0940_part12: IoU=0.8172, true=0.8322, pred=0.8404, error=0.0082
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0940_part13: IoU=0.8430, true=0.8625, pred=0.8645, error=0.0020
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0940_part14: IoU=0.8480, true=0.8858, pred=0.8577, error=0.0281
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0940_part15: IoU=0.8190, true=0.8658, pred=0.8366, error=0.0292
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0940_part16: IoU=0.7540, true=0.7736, pred=0.7814, error=0.0079
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0941_part01: IoU=0.8633, true=0.8564, pred=0.8635, error=0.0071
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0941_part02: IoU=0.8873, true=0.8956, pred=0.8776, error=0.0180
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0941_part03: IoU=0.8470, true=0.8385, pred=0.8421, error=0.0035
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0941_part04: IoU=0.8174, true=0.8477, pred=0.7898, error=0.0580
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0941_part05: IoU=0.8978, true=0.8847, pred=0.9122, error=0.0275
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0941_part06: IoU=0.8858, true=0.8914, pred=0.8703, error=0.0210
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0941_part07: IoU=0.8590, true=0.8941, pred=0.8511, error=0.0429
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0941_part08: IoU=0.8363, true=0.8812, pred=0.8146, error=0.0666
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0941_part09: IoU=0.9174, true=0.9175, pred=0.9193, error=0.0018
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0941_part10: IoU=0.8902, true=0.9393, pred=0.8847, error=0.0546
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0941_part11: IoU=0.8698, true=0.9229, pred=0.8520, error=0.0709
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0941_part12: IoU=0.7954, true=0.8417, pred=0.7890, error=0.0527
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0941_part13: IoU=0.8704, true=0.8732, pred=0.8576, error=0.0156
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0941_part14: IoU=0.8873, true=0.9221, pred=0.8889, error=0.0332
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0941_part15: IoU=0.8246, true=0.8985, pred=0.7814, error=0.1171
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0941_part16: IoU=0.8161, true=0.8154, pred=0.7838, error=0.0316
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0942_part01: IoU=0.8717, true=0.8545, pred=0.8938, error=0.0393
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0942_part02: IoU=0.9299, true=0.9474, pred=0.9111, error=0.0363
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0942_part03: IoU=0.8530, true=0.8914, pred=0.8171, error=0.0743
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0942_part04: IoU=0.7474, true=0.8821, pred=0.7050, error=0.1771
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0942_part05: IoU=0.8396, true=0.8282, pred=0.9089, error=0.0807
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0942_part06: IoU=0.9236, true=0.9395, pred=0.9161, error=0.0234
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0942_part07: IoU=0.8003, true=0.8605, pred=0.7557, error=0.1048
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0942_part08: IoU=0.7238, true=0.7867, pred=0.7274, error=0.0594
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0942_part09: IoU=0.9052, true=0.8865, pred=0.9038, error=0.0173
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0942_part10: IoU=0.8956, true=0.9045, pred=0.8624, error=0.0421
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0942_part11: IoU=0.8343, true=0.8403, pred=0.8450, error=0.0047
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0942_part12: IoU=0.8232, true=0.8730, pred=0.8049, error=0.0681
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0942_part13: IoU=0.9271, true=0.9351, pred=0.9019, error=0.0332
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0942_part14: IoU=0.8848, true=0.9173, pred=0.8601, error=0.0572
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0942_part15: IoU=0.8419, true=0.9112, pred=0.8129, error=0.0983
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0942_part16: IoU=0.8383, true=0.9021, pred=0.8113, error=0.0908
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0944_part01: IoU=0.8968, true=0.9235, pred=0.8883, error=0.0352
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0944_part02: IoU=0.8397, true=0.8160, pred=0.8400, error=0.0240
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0944_part03: IoU=0.8407, true=0.9092, pred=0.8045, error=0.1047
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0944_part04: IoU=0.8008, true=0.8230, pred=0.7691, error=0.0539
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0944_part05: IoU=0.9023, true=0.8848, pred=0.8673, error=0.0175
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0944_part06: IoU=0.8775, true=0.8778, pred=0.9067, error=0.0290
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0944_part07: IoU=0.6924, true=0.7192, pred=0.6457, error=0.0735
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0944_part08: IoU=0.7693, true=0.9163, pred=0.7476, error=0.1686
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0944_part09: IoU=0.8964, true=0.8924, pred=0.9109, error=0.0185
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0944_part10: IoU=0.8666, true=0.8820, pred=0.8729, error=0.0091
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0944_part11: IoU=0.8098, true=0.8267, pred=0.7941, error=0.0326
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0944_part12: IoU=0.7541, true=0.8871, pred=0.7328, error=0.1543
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0944_part13: IoU=0.8066, true=0.7807, pred=0.8060, error=0.0252
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0944_part14: IoU=0.8692, true=0.9065, pred=0.8355, error=0.0710
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0944_part15: IoU=0.8133, true=0.8157, pred=0.8638, error=0.0480
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0944_part16: IoU=0.7568, true=0.7914, pred=0.7581, error=0.0333
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0945_part01: IoU=0.9427, true=0.9645, pred=0.9497, error=0.0147
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0945_part02: IoU=0.8739, true=0.9319, pred=0.8778, error=0.0541
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0945_part03: IoU=0.8850, true=0.9467, pred=0.8731, error=0.0736
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0945_part04: IoU=0.8196, true=0.9506, pred=0.8058, error=0.1449
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0945_part05: IoU=0.9257, true=0.9594, pred=0.9229, error=0.0364
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0945_part06: IoU=0.9057, true=0.9344, pred=0.9180, error=0.0164
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0945_part07: IoU=0.8679, true=0.9599, pred=0.8653, error=0.0946
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0945_part08: IoU=0.8513, true=0.9484, pred=0.8491, error=0.0992
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0945_part09: IoU=0.9105, true=0.9421, pred=0.9194, error=0.0227
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0945_part10: IoU=0.8827, true=0.9320, pred=0.8877, error=0.0443
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0945_part11: IoU=0.8222, true=0.9335, pred=0.7963, error=0.1372
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0945_part12: IoU=0.7925, true=0.9245, pred=0.7874, error=0.1370
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0945_part13: IoU=0.8705, true=0.9012, pred=0.8425, error=0.0587
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0945_part14: IoU=0.8881, true=0.9215, pred=0.8844, error=0.0372
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0945_part15: IoU=0.7194, true=0.8681, pred=0.6650, error=0.2031
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0945_part16: IoU=0.8089, true=0.9558, pred=0.8125, error=0.1433
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0946_part01: IoU=0.8484, true=0.8987, pred=0.8786, error=0.0201
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0946_part02: IoU=0.8908, true=0.9587, pred=0.8862, error=0.0726
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0946_part03: IoU=0.8321, true=0.9588, pred=0.8179, error=0.1408
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0946_part04: IoU=0.7903, true=0.9699, pred=0.7799, error=0.1900
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0946_part05: IoU=0.9314, true=0.9652, pred=0.9343, error=0.0309
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0946_part06: IoU=0.8601, true=0.9276, pred=0.8514, error=0.0762
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0946_part07: IoU=0.8131, true=0.9631, pred=0.8105, error=0.1526
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0946_part08: IoU=0.6178, true=0.7981, pred=0.6226, error=0.1755
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0946_part09: IoU=0.8930, true=0.9535, pred=0.8825, error=0.0710
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0946_part10: IoU=0.8811, true=0.9604, pred=0.8779, error=0.0825
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0946_part11: IoU=0.8370, true=0.9590, pred=0.8235, error=0.1354
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0946_part12: IoU=0.7494, true=0.9650, pred=0.7343, error=0.2307
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0946_part13: IoU=0.9129, true=0.9695, pred=0.9023, error=0.0672
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0946_part14: IoU=0.8685, true=0.9329, pred=0.8648, error=0.0681
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0946_part15: IoU=0.8490, true=0.9801, pred=0.8417, error=0.1384
+/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0946_part16: IoU=0.8333, true=0.9633, pred=0.8276, error=0.1357
+
+Per-image results on E:
+Mean IoU: 0.8241
+IoU standard deviation: 0.0664
+Coverage MAE: 0.0771
+Coverage RMSE: 0.0973
+Coverage bias: -0.0007
+Maximum coverage error: 0.2731
+(.venv) chickenpielu@bogon residue_coverage % 

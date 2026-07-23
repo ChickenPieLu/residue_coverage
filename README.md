@@ -1,8 +1,24 @@
 # Residue Coverage in the Cornfield
 
+## Current Model
+
+The current model is an SMP U-Net with an ImageNet-pretrained ResNet-34
+encoder. Its training code is in the repository root and uses A/B/C for
+training, D for validation and E only for the final test.
+
+```bash
+python main.py
+python test.py
+python visualiseE.py
+```
+
+The best validation checkpoint is saved as
+`smp_unet_resnet34_imagenet_abc_bce_dice_seed42.pth`.
+
 ## Project Layout and Commands
 
-Both historical approaches now live under `legacy/` and use the same
+The historical Mini U-Net and Random Forest approaches live under `legacy/`
+and use the same
 location-based split:
 
 - training: `A`, `B`, `C`
