@@ -1,57 +1,344 @@
-# Residue Coverage in the Cornfield
+# 农田秸秆覆盖率预测
 
-## Current Model
+本项目使用图像分割模型识别农田图片中的秸秆像素，并计算秸秆覆盖率：
 
-The current model is an SMP U-Net with an ImageNet-pretrained ResNet-34
-encoder. The model definition, trained checkpoint, and single-image inference
-script are in the repository root. Training and experiment code is collected
-under `training/` and uses A/B/C for training, D for validation and E only for
-the final test.
-
-```bash
-python -m training.main
-python -m training.test
-python -m training.visualiseE
+```text
+coverage = 预测为秸秆的像素数 / 图片总像素数
 ```
 
-`training.main` saves to
-`smp_unet_resnet34_training_candidate_seed42.pth` by default and refuses to overwrite
-the existing production checkpoint. Choose another new path with
-`--output-checkpoint`.
+当前推荐模型是以 ImageNet 预训练 ResNet-34 为编码器的 SMP U-Net。项目同时保留了
+Mini U-Net 和 Random Forest 两个历史模型，用于统一测试与效果比较。
 
-The best validation checkpoint is saved as
-`smp_unet_resnet34_imagenet_abc_bce_dice_seed42.pth`.
+## 项目结构
 
-To evaluate all three archived/current models on test location E and regenerate
-the metric tables and representative-case figures under `logs/`:
-
-```bash
-python -m training.evaluate_all_models
+```text
+residue_coverage/
+├── predict.py
+├── model.py
+├── requirements.txt
+├── MODEL_CHECKSUMS.sha256
+├── smp_unet_resnet34_imagenet_abc_bce_dice_seed42.pth
+├── smp_unet_resnet34_retrained_seed42.pth
+├── smp_unet_resnet34_cpu_run_seed42.pth
+│
+├── training/
+│   ├── main.py
+│   ├── dataset.py
+│   ├── evaluate.py
+│   ├── evaluate_all_models.py
+│   ├── test.py
+│   ├── utils.py
+│   └── visualiseE.py
+│
+├── legacy/
+│   ├── classical_ml/
+│   │   ├── residue_rf_model.joblib
+│   │   ├── training.py
+│   │   ├── test.py
+│   │   └── visualiseE.py
+│   └── unet/
+│       ├── mini_unet_abc_bce+dice_seed42_train_generator.pth
+│       ├── main.py
+│       ├── test.py
+│       └── visualiseE.py
+│
+├── residue_background/
+│   ├── A/
+│   ├── B/
+│   ├── C/
+│   ├── D/
+│   └── E/
+│
+└── logs/
+    ├── model_test_report.txt
+    ├── model_test_metrics.csv
+    ├── model_test_per_image.csv
+    ├── smp_unet_mps_retraining.log
+    ├── retrained_smp/
+    ├── Figure_RF_MAE.png
+    ├── Figure_MiniUNet_MAE.png
+    └── Figure_smpUnet_MAE.png
 ```
 
-To predict the residue coverage of one image:
+主要文件说明：
+
+- `predict.py`：使用当前 SMP U-Net 预测单张图片。
+- `model.py`：当前 SMP U-Net 模型结构。
+- `training/`：当前模型的训练、测试和统一评估代码。
+- `legacy/classical_ml/`：Random Forest 模型及其历史代码。
+- `legacy/unet/`：Mini U-Net 模型及其历史代码。
+- `logs/`：测试指标、逐图结果、训练日志和报告图。
+- `MODEL_CHECKSUMS.sha256`：模型文件的 SHA-256 校验值。
+
+`smp_unet_resnet34_cpu_run_seed42.pth` 是保留用于对照的 CPU 训练版本，不是
+`predict.py` 的默认模型。由于 `.pth` 文件体积较大并被 Git 忽略，复制或备份模型后建议
+使用校验文件确认内容没有变化。
+
+## 环境安装
+
+推荐使用项目自带的虚拟环境；如果需要重新创建：
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+以后进入项目时只需：
+
+```bash
+source .venv/bin/activate
+```
+
+验证当前模型文件是否完整：
+
+```bash
+shasum -a 256 -c MODEL_CHECKSUMS.sha256
+```
+
+## 命令行预测单张图片
+
+最简单的用法是把图片地址作为第一个参数：
 
 ```bash
 python predict.py /path/to/image.jpg
 ```
 
-The command prints the predicted coverage percentage and saves
-`<input_name>_coverage.png` beside the input image. The saved Matplotlib figure
-contains the original image and predicted binary mask side by side. Use
-`--output result.png` to choose another output path, or `--show` to also open
-the figure window.
+例如：
 
-## Project Layout and Commands
+```bash
+python predict.py residue_background/E/IMG_0941_part09.jpg
+```
 
-The historical Mini U-Net and Random Forest approaches live under `legacy/`
-and use the same
-location-based split:
+程序会：
 
-- training: `A`, `B`, `C`
-- validation: `D`
-- final test: `E`
+1. 加载根目录中的默认 SMP U-Net checkpoint；
+2. 对输入图片进行 ImageNet normalization；
+3. 预测二值秸秆 mask；
+4. 计算秸秆像素占整张图片像素的百分比；
+5. 在命令行打印 coverage；
+6. 在原图旁边保存一张 Matplotlib 结果图。
 
-The Mini U-Net code is in `legacy/unet/`:
+默认结果保存在输入图片旁边，文件名为：
+
+```text
+<原文件名>_coverage.png
+```
+
+结果图左侧为原图，右侧为预测 mask；mask 中白色表示预测的秸秆像素，标题中会显示
+coverage 百分比。
+
+### 指定输出位置
+
+```bash
+python predict.py image.jpg --output results/image_prediction.png
+```
+
+也可以使用简写：
+
+```bash
+python predict.py image.jpg -o results/image_prediction.png
+```
+
+### 显示 Matplotlib 窗口
+
+结果默认只保存到文件。如果还需要打开窗口：
+
+```bash
+python predict.py image.jpg --show
+```
+
+### 指定模型、阈值或设备
+
+```bash
+python predict.py image.jpg \
+  --checkpoint smp_unet_resnet34_retrained_seed42.pth \
+  --threshold 0.5 \
+  --device mps
+```
+
+设备选项：
+
+- `auto`：优先 CUDA，其次 MPS，最后 CPU；
+- `cuda`：NVIDIA GPU；
+- `mps`：Apple Silicon GPU；
+- `cpu`：CPU。
+
+完整参数：
+
+```bash
+python predict.py --help
+```
+
+模型可以处理非 32 倍数尺寸的图片：脚本会自动补边到模型所需尺寸，预测后再裁回原图尺寸。
+
+## 数据划分
+
+所有图片都使用同名的 JPG/TIF 文件配对：
+
+```text
+IMG_xxxx_partxx.jpg
+IMG_xxxx_partxx.tif
+```
+
+数据按拍摄位置划分，没有把不同位置随机混合：
+
+| 用途 | 位置 | 图片数量 |
+|---|---|---:|
+| 训练 | A、B、C | 400 |
+| 验证与 early stopping | D | 144 |
+| 最终测试 | E | 144 |
+
+二值 mask 的定义：
+
+- `1`：秸秆；
+- `0`：背景。
+
+## 三个模型的 E 集测试效果
+
+三个模型使用相同的 `residue_background/E` 测试集，共 144 张图片。
+
+- Random Forest 阈值：`0.60`
+- Mini U-Net 阈值：`0.50`
+- SMP U-Net 阈值：`0.50`
+
+### 分割指标
+
+| 模型 | Pixel IoU | Mean IoU | Global Dice | Mean Dice | Precision | Recall | Specificity | Pixel accuracy |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Random Forest | 0.6458 | 0.6458 | 0.7848 | 0.7818 | 0.9572 | 0.6650 | 0.8353 | 0.6911 |
+| Mini U-Net | 0.7780 | 0.7755 | 0.8751 | 0.8714 | 0.9297 | 0.8266 | 0.6537 | 0.8002 |
+| **SMP U-Net (ResNet-34)** | **0.8260** | **0.8241** | **0.9047** | **0.9021** | **0.9051** | **0.9043** | 0.4750 | **0.8387** |
+
+`Pixel IoU` 和 `Global Dice` 先汇总所有测试像素再计算；`Mean IoU` 和 `Mean Dice`
+是 144 张图片逐图计算后的平均值。
+
+### Coverage 指标
+
+测试集的真实总体 coverage 为 `84.70%`。
+
+| 模型 | 预测 coverage | Coverage MAE | Coverage RMSE | Coverage bias | 最大绝对误差 |
+|---|---:|---:|---:|---:|---:|
+| Random Forest | 58.85% | 25.86% | 27.78% | -25.86% | 52.49% |
+| Mini U-Net | 75.31% | 11.73% | 14.31% | -9.39% | 37.46% |
+| **SMP U-Net (ResNet-34)** | **84.63%** | **7.71%** | **9.73%** | **-0.07%** | **27.31%** |
+
+其中：
+
+- `Coverage MAE`：每张图片 coverage 绝对误差的平均值；
+- `Coverage RMSE`：对较大误差更敏感；
+- `Coverage bias`：预测 coverage 减去真实 coverage，正值表示总体高估，负值表示总体低估。
+
+### 结果解读
+
+- Random Forest precision 很高，但 recall 较低，整体明显低估秸秆覆盖率。
+- Mini U-Net 的分割和 coverage 结果明显优于 Random Forest，但仍存在约 `9.39`
+  个百分点的总体低估。
+- SMP U-Net 的 IoU、Dice 和 coverage MAE 都是三个模型中最佳；其总体 coverage
+  与真实值只相差约 `0.07` 个百分点。
+
+完整测试数据：
+
+- `logs/model_test_report.txt`：便于阅读的完整汇总；
+- `logs/model_test_metrics.csv`：三个模型的汇总指标；
+- `logs/model_test_metrics.json`：JSON 格式汇总；
+- `logs/model_test_per_image.csv`：三个模型共 432 条逐图指标。
+
+报告图：
+
+- `logs/Figure_RF_MAE.png`
+- `logs/Figure_MiniUNet_MAE.png`
+- `logs/Figure_smpUnet_MAE.png`
+
+每张报告图包含三行：
+
+1. coverage 绝对误差最低的图片；
+2. coverage 绝对误差最接近该模型平均 MAE 的图片；
+3. coverage 绝对误差最高的图片。
+
+每一行依次展示原图、真实 mask、预测 mask 和 error map。Error map 中：
+
+- 红色：false positive；
+- 蓝色：false negative；
+- 黑色：预测正确。
+
+## 重新生成三模型测试报告
+
+从项目根目录运行：
+
+```bash
+python -m training.evaluate_all_models
+```
+
+只测试 SMP U-Net：
+
+```bash
+python -m training.evaluate_all_models \
+  --models smp_unet_resnet34
+```
+
+测试指定的 SMP checkpoint：
+
+```bash
+python -m training.evaluate_all_models \
+  --models smp_unet_resnet34 \
+  --smp-checkpoint smp_unet_resnet34_retrained_seed42.pth \
+  --output-dir logs/retrained_smp
+```
+
+Apple Silicon 可以显式使用 MPS：
+
+```bash
+python -m training.evaluate_all_models --device mps
+```
+
+## 重新训练当前 SMP U-Net
+
+当前训练配置：
+
+| 配置 | 值 |
+|---|---|
+| 模型 | SMP U-Net |
+| Encoder | ResNet-34 |
+| Encoder 初始化 | ImageNet |
+| 训练集 | A、B、C |
+| 验证集 | D |
+| Loss | BCE + soft Dice |
+| Optimizer | Adam |
+| Learning rate | `1e-4` |
+| Batch size | 4 |
+| Seed | 42 |
+| 最大 epochs | 50 |
+| Early-stopping patience | 10 |
+| 选模指标 | 验证集 IoU |
+
+在 Apple Silicon 上训练：
+
+```bash
+python -m training.main \
+  --device mps \
+  --output-checkpoint smp_unet_resnet34_training_candidate_seed42.pth
+```
+
+训练脚本拒绝覆盖已有 checkpoint。输出文件已经存在时，需要选择一个新的文件名，而不是
+直接覆盖生产模型。
+
+最近一次 MPS 重训在 Epoch 33 early stop，最佳 checkpoint 来自 Epoch 23：
+
+| 数据集 | IoU | Dice | Precision | Recall | Coverage MAE |
+|---|---:|---:|---:|---:|---:|
+| 训练 A/B/C | 0.7778 | 0.8750 | 0.8942 | 0.8566 | 1.37% |
+| 验证 D | 0.5538 | 0.7128 | 0.6593 | 0.7758 | 5.66% |
+
+完整训练日志位于：
+
+```text
+logs/smp_unet_mps_retraining.log
+```
+
+## 历史模型命令
+
+### Mini U-Net
 
 ```bash
 python -m legacy.unet.main
@@ -59,274 +346,44 @@ python -m legacy.unet.test
 python -m legacy.unet.visualiseE
 ```
 
-The Random Forest code is in `legacy/classical_ml/`. Its default training
-command trains on A/B/C and validates on D; the test command evaluates only
-the unseen E images:
+### Random Forest
+
+训练：
 
 ```bash
 python -m legacy.classical_ml.training
+```
+
+测试 E 集：
+
+```bash
 python -m legacy.classical_ml.test
+```
+
+生成历史可视化：
+
+```bash
 python -m legacy.classical_ml.visualiseE
 ```
 
-Both visualisation scripts use the same three E cases, so their masks and
-coverage errors can be compared directly. The Random Forest keeps its
-historical probability threshold of `0.60`; it can be overridden with
-`--threshold`.
+Random Forest 默认使用 `0.60` 概率阈值，可通过 `--threshold` 修改。
 
-## U-Net Experiments
+## 当前推荐
 
-This document records the development and evaluation of a U-Net model for
-crop residue segmentation and coverage estimation.
+实际预测优先使用根目录的 SMP U-Net：
 
-### Task
+```text
+smp_unet_resnet34_imagenet_abc_bce_dice_seed42.pth
+```
 
-Given an RGB field image, the model predicts a binary segmentation mask:
+它与最近重训输出的以下文件内容完全一致：
 
-- `1`: crop residue
-- `0`: background
+```text
+smp_unet_resnet34_retrained_seed42.pth
+```
 
-The predicted residue coverage is calculated as the proportion of pixels
-classified as crop residue.
+推荐直接使用：
 
-### Data Split
-
-The dataset was split by location rather than by randomly mixing images:
-
-- Training set: locations A, B and C
-- Validation set: location D
-- Final test set: location E (kept completely unseen)
-
-This is a cross-location evaluation: the model is trained on images from
-several locations and validated on a different location. Location D is used
-for early stopping and model selection, so it is treated as a validation set
-rather than a completely unbiased final test set.
-
-### Shared Experimental Configuration
-
-| Setting | Value |
-|---|---|
-| Model | Mini U-Net |
-| Input | RGB image |
-| Output | Single-channel segmentation logits |
-| Optimizer | Adam |
-| Learning rate | 0.01 |
-| Batch size | 4 |
-| Random seed | 114514 |
-| Training DataLoader | Shuffled with a separately seeded generator |
-| Validation DataLoader | Not shuffled |
-| Prediction threshold | 0.5 |
-| Maximum epochs | 50 |
-| Early-stopping patience | 10 epochs |
-| Model-selection metric | Validation IoU |
-
-The best checkpoint in each experiment was selected using IoU on validation
-location D. Location E was not used for training, model selection or
-hyperparameter tuning.
-
-## Experiment 1: BCE Baseline
-
-### Loss Function
-
-The baseline uses binary cross-entropy with logits:
-
-`BCEWithLogitsLoss`
-
-### Results
-
-The best checkpoint was obtained at epoch 24. Training stopped at epoch 34
-after 10 consecutive epochs without improvement.
-
-| Dataset | Loss | IoU | Dice | Precision | Recall | Coverage MAE | True coverage | Predicted coverage |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| Training (A/B/C) | 0.2307 | 0.6341 | 0.7761 | 0.7820 | 0.7702 | 0.0410 | 22.61% | 22.27% |
-| Validation (D) | 0.3522 | 0.5168 | 0.6814 | 0.6420 | 0.7260 | 0.0527 | 22.25% | 25.16% |
-
-### Interpretation
-
-The baseline achieves an IoU of `0.5168` and a Dice score of `0.6814` on
-validation location D. This indicates that the model has learned features
-that generalise across locations, although a performance gap remains between
-the training and validation sets.
-
-Validation recall (`0.7260`) is higher than precision (`0.6420`). Therefore,
-the model detects most labelled residue pixels but also classifies some
-background pixels as residue.
-
-The predicted aggregate coverage on location D is `25.16%`, compared with a
-true aggregate coverage of `22.25%`, corresponding to an overall
-overestimation of `2.91` percentage points. However, the per-image coverage
-MAE is `5.27` percentage points, showing that individual-image errors are
-larger than the aggregate difference because overestimation and
-underestimation partially cancel across images.
-
-The training and validation IoU difference is:
-
-`0.6341 - 0.5168 = 0.1173`
-
-This suggests moderate cross-location generalisation error, leaving room for
-improvement through better loss functions, data augmentation and additional
-cross-location data.
-
-### Reproducibility
-
-A repeated run using the same random seed and an explicitly seeded training
-DataLoader produced nearly the same best validation IoU as the previous run
-(`0.5168` versus `0.5183`). The reproducible result of `0.5168` is used as
-the official BCE baseline.
-
-## Experiment 2: BCE + Dice Loss
-
-### Motivation and Loss Function
-
-The second experiment tests whether directly optimising the overlap between
-the predicted and true masks improves segmentation performance. The loss is
-an unweighted sum of BCE and soft Dice loss:
-
-`total loss = BCE loss + Dice loss`
-
-BCE supervises each pixel independently, while Dice loss gives greater
-emphasis to the overlap of the complete predicted residue region with the
-ground-truth region.
-
-All other settings, including the data split, random seed, optimiser,
-learning rate, batch size, threshold and early-stopping procedure, were kept
-the same as in the BCE baseline.
-
-### Training Behaviour
-
-At epoch 0, the model predicted only background on location D, producing an
-IoU of `0.0000`. Validation IoU then increased rapidly to `0.4195` by epoch 4
-and continued to improve more slowly. New best checkpoints were obtained at
-epochs 9, 10, 13, 16, 20 and 25.
-
-The best validation IoU was obtained at epoch 25. Training stopped at epoch
-35 after 10 consecutive epochs without improvement. After epoch 25, the
-training loss continued to fluctuate around a gradually declining level, but
-validation IoU remained approximately between `0.46` and `0.52`, indicating
-that additional training was not producing a consistent improvement in
-cross-location generalisation.
-
-### Results
-
-| Dataset | Total loss | IoU | Dice | Precision | Recall | Coverage MAE | True coverage | Predicted coverage |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| Training (A/B/C) | 0.5276 | 0.6517 | 0.7892 | 0.7991 | 0.7795 | 0.0367 | 22.61% | 22.06% |
-| Validation (D) | 0.8274 | 0.5163 | 0.6810 | 0.6332 | 0.7367 | 0.0521 | 22.25% | 25.89% |
-
-At the best epoch, the final training-batch averages reported during training
-were approximately:
-
-| Component | Value |
-|---|---:|
-| BCE loss | 0.2480 |
-| Dice loss | 0.3065 |
-| Total loss | 0.5546 |
-
-These batch-averaged values are included only to show the relative
-contribution of the two loss components during training. The checkpoint
-metrics above were calculated by evaluating the saved best model over the
-complete datasets.
-
-### Interpretation
-
-The BCE + Dice model achieves a validation IoU of `0.5163`, which is almost
-identical to the BCE baseline IoU of `0.5168`. Dice score is also essentially
-unchanged (`0.6810` versus `0.6814`). Therefore, this experiment provides no
-evidence that adding Dice loss materially improves cross-location
-segmentation under the current configuration.
-
-Compared with BCE alone, BCE + Dice produces slightly lower precision and
-slightly higher recall. It predicts more residue on location D, increasing
-aggregate predicted coverage from `25.16%` to `25.89%`. The per-image coverage
-MAE improves only marginally, from `5.27` to `5.21` percentage points.
-
-The BCE + Dice training and validation IoU difference is:
-
-`0.6517 - 0.5163 = 0.1354`
-
-This is larger than the BCE baseline gap of `0.1173`. The combination of a
-higher training IoU and unchanged validation IoU suggests that the main
-remaining limitation is generalisation to a new location rather than an
-inability to fit the training data.
-
-The absolute loss values from the two experiments must not be compared
-directly. The BCE + Dice loss is the sum of two terms, so a total loss around
-`0.5` does not imply that the model is undertrained, nor does it mean that it
-has a fixed amount of improvement remaining. Overfitting is assessed using
-the training-validation performance gap and the validation trend, not by how
-close the training loss is to zero.
-
-## Comparison of Loss Functions
-
-| Validation metric | BCE | BCE + Dice | Change |
-|---|---:|---:|---:|
-| IoU | 0.5168 | 0.5163 | -0.0005 |
-| Dice | 0.6814 | 0.6810 | -0.0004 |
-| Precision | 0.6420 | 0.6332 | -0.0088 |
-| Recall | 0.7260 | 0.7367 | +0.0107 |
-| Coverage MAE | 0.0527 | 0.0521 | -0.0006 |
-| Predicted coverage | 25.16% | 25.89% | +0.73 pp |
-
-The observed differences are extremely small and could be caused by normal
-training variation. A multi-seed comparison would be required to make a
-strong claim about which loss is better. For the present project, the main
-conclusion is that replacing BCE with an unweighted BCE + Dice objective did
-not overcome the cross-location generalisation bottleneck.
-
-## Current Conclusion and Wrap-up Plan
-
-The project has now established a reproducible U-Net training and evaluation
-pipeline with:
-
-1. location-based training, validation and test splits;
-2. deterministic random seeds and DataLoader shuffling;
-3. IoU-based checkpoint selection and early stopping;
-4. IoU, Dice, precision, recall and coverage-error evaluation;
-5. a reproducible BCE baseline;
-6. a controlled BCE + Dice loss comparison.
-
-Simply increasing the maximum epoch count is unlikely to provide a meaningful
-improvement. The BCE + Dice run already shows a training-validation gap, and
-validation IoU stopped improving consistently after epoch 25 even though the
-training objective continued to decrease. Increasing patience slightly could
-allow for more validation fluctuation, but it would not address the main
-cross-location limitation.
-
-The most valuable source of further improvement would be additional real data
-from a wider range of locations, soil colours, lighting conditions, residue
-types and camera conditions. Since such data is not currently available, the
-remaining training work will be limited to one controlled data-augmentation
-experiment.
-
-### Final Planned Experiment
-
-The final experiment will use modest transformations that preserve the
-segmentation labels:
-
-- random horizontal flipping;
-- random vertical flipping;
-- random rotation by 0, 90, 180 or 270 degrees;
-- optionally, small brightness and contrast adjustments applied only to the
-  RGB image.
-
-The image and mask must receive exactly the same geometric transformation.
-Colour or brightness transformations must be applied only to the image.
-
-Data augmentation cannot create genuinely new locations or soil and lighting
-conditions, so only a small improvement is expected. A plausible improvement
-range is approximately `0.00–0.04` IoU, and no improvement is also possible.
-The purpose of this final experiment is to test whether simple invariances
-reduce overfitting, rather than to begin an extensive new tuning cycle.
-
-After this experiment, development will move to project wrap-up:
-
-1. compare the Random Forest, BCE U-Net, BCE + Dice U-Net and augmented U-Net;
-2. visualise representative successful and failed predictions;
-3. analyse cross-location failure cases and coverage-estimation errors;
-4. document limitations and possible future work;
-5. evaluate the selected final configuration once on untouched location E.
-
-Location E must remain untouched until the final model configuration has been
-selected. Its result will be reported as the final held-out test result and
-must not be used for further hyperparameter tuning.
+```bash
+python predict.py /path/to/image.jpg
+```
