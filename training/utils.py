@@ -5,7 +5,7 @@ import cv2
 import torch
 import tifffile
 
-PROJECT_ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_ROOT = PROJECT_ROOT / "residue_background"
 DEFAULT_CHECKPOINT = (
     PROJECT_ROOT

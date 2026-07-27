@@ -11,6 +11,8 @@ __pycache__/
 *.tif
 *.zip
 
+!/logs/Figure_*_MAE.png
+
 *.pkl
 *.joblib
 *.pth

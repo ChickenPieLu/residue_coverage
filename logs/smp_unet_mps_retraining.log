@@ -1,0 +1,181 @@
+Using device: mps
+Number of training pairs: 400
+Model: smp_unet_resnet34_imagenet
+Checkpoint: /Users/chickenpielu/Projects/work/residue_coverage/smp_unet_resnet34_retrained_seed42.pth
+
+Epoch 0
+Average loss: 1.093532, BCE: 0.516904, Dice loss: 0.576627
+loss=1.3167, IoU=0.4543, Dice=0.6247, Precision=0.4825, Recall=0.8860, Coverage_MAE=0.1862, true_ratio=0.2225, pred_ratio=0.4086, max_prob=1.0000
+(best IoU so far: 0.4543, epoch 0)
+
+Epoch 1
+Average loss: 0.873785, BCE: 0.373740, Dice loss: 0.500045
+loss=1.1107, IoU=0.5059, Dice=0.6719, Precision=0.5572, Recall=0.8460, Coverage_MAE=0.1191, true_ratio=0.2225, pred_ratio=0.3378, max_prob=1.0000
+(best IoU so far: 0.5059, epoch 1)
+
+Epoch 2
+Average loss: 0.765143, BCE: 0.314875, Dice loss: 0.450268
+loss=0.9499, IoU=0.5106, Dice=0.6760, Precision=0.5645, Recall=0.8424, Coverage_MAE=0.1112, true_ratio=0.2225, pred_ratio=0.3321, max_prob=1.0000
+(best IoU so far: 0.5106, epoch 2)
+
+Epoch 3
+Average loss: 0.713228, BCE: 0.297331, Dice loss: 0.415896
+loss=1.0919, IoU=0.4746, Dice=0.6437, Precision=0.5014, Recall=0.8988, Coverage_MAE=0.1765, true_ratio=0.2225, pred_ratio=0.3989, max_prob=1.0000
+No improvement for 1/10 epochs
+
+Epoch 4
+Average loss: 0.628916, BCE: 0.254478, Dice loss: 0.374438
+loss=1.1579, IoU=0.5135, Dice=0.6786, Precision=0.5620, Recall=0.8562, Coverage_MAE=0.1210, true_ratio=0.2225, pred_ratio=0.3390, max_prob=1.0000
+(best IoU so far: 0.5135, epoch 4)
+
+Epoch 5
+Average loss: 0.600380, BCE: 0.247060, Dice loss: 0.353320
+loss=0.8996, IoU=0.5213, Dice=0.6853, Precision=0.5752, Recall=0.8476, Coverage_MAE=0.1098, true_ratio=0.2225, pred_ratio=0.3279, max_prob=1.0000
+(best IoU so far: 0.5213, epoch 5)
+
+Epoch 6
+Average loss: 0.571508, BCE: 0.235786, Dice loss: 0.335722
+loss=0.7603, IoU=0.5444, Dice=0.7050, Precision=0.6947, Recall=0.7156, Coverage_MAE=0.0475, true_ratio=0.2225, pred_ratio=0.2292, max_prob=1.0000
+(best IoU so far: 0.5444, epoch 6)
+
+Epoch 7
+Average loss: 0.554185, BCE: 0.233602, Dice loss: 0.320582
+loss=0.8927, IoU=0.5397, Dice=0.7010, Precision=0.6115, Recall=0.8214, Coverage_MAE=0.0864, true_ratio=0.2225, pred_ratio=0.2989, max_prob=1.0000
+No improvement for 1/10 epochs
+
+Epoch 8
+Average loss: 0.535113, BCE: 0.226247, Dice loss: 0.308867
+loss=0.8920, IoU=0.5373, Dice=0.6990, Precision=0.6089, Recall=0.8205, Coverage_MAE=0.0884, true_ratio=0.2225, pred_ratio=0.2998, max_prob=1.0000
+No improvement for 2/10 epochs
+
+Epoch 9
+Average loss: 0.530441, BCE: 0.226717, Dice loss: 0.303723
+loss=0.8584, IoU=0.5258, Dice=0.6892, Precision=0.5813, Recall=0.8464, Coverage_MAE=0.1043, true_ratio=0.2225, pred_ratio=0.3240, max_prob=1.0000
+No improvement for 3/10 epochs
+
+Epoch 10
+Average loss: 0.498484, BCE: 0.209824, Dice loss: 0.288660
+loss=0.8662, IoU=0.5385, Dice=0.7000, Precision=0.6093, Recall=0.8224, Coverage_MAE=0.0886, true_ratio=0.2225, pred_ratio=0.3003, max_prob=1.0000
+No improvement for 4/10 epochs
+
+Epoch 11
+Average loss: 0.471390, BCE: 0.198418, Dice loss: 0.272971
+loss=0.8280, IoU=0.5359, Dice=0.6978, Precision=0.5936, Recall=0.8466, Coverage_MAE=0.0979, true_ratio=0.2225, pred_ratio=0.3174, max_prob=1.0000
+No improvement for 5/10 epochs
+
+Epoch 12
+Average loss: 0.456906, BCE: 0.194786, Dice loss: 0.262120
+loss=0.7583, IoU=0.5457, Dice=0.7061, Precision=0.6799, Recall=0.7344, Coverage_MAE=0.0471, true_ratio=0.2225, pred_ratio=0.2404, max_prob=1.0000
+(best IoU so far: 0.5457, epoch 12)
+
+Epoch 13
+Average loss: 0.445806, BCE: 0.190681, Dice loss: 0.255126
+loss=0.8491, IoU=0.5406, Dice=0.7018, Precision=0.6030, Recall=0.8393, Coverage_MAE=0.0897, true_ratio=0.2225, pred_ratio=0.3097, max_prob=1.0000
+No improvement for 1/10 epochs
+
+Epoch 14
+Average loss: 0.461323, BCE: 0.202058, Dice loss: 0.259266
+loss=0.7936, IoU=0.5511, Dice=0.7106, Precision=0.6340, Recall=0.8082, Coverage_MAE=0.0684, true_ratio=0.2225, pred_ratio=0.2837, max_prob=1.0000
+(best IoU so far: 0.5511, epoch 14)
+
+Epoch 15
+Average loss: 0.437870, BCE: 0.189964, Dice loss: 0.247906
+loss=0.7730, IoU=0.5523, Dice=0.7116, Precision=0.6743, Recall=0.7534, Coverage_MAE=0.0542, true_ratio=0.2225, pred_ratio=0.2486, max_prob=1.0000
+(best IoU so far: 0.5523, epoch 15)
+
+Epoch 16
+Average loss: 0.409386, BCE: 0.177051, Dice loss: 0.232335
+loss=0.7860, IoU=0.5496, Dice=0.7093, Precision=0.6481, Recall=0.7833, Coverage_MAE=0.0604, true_ratio=0.2225, pred_ratio=0.2689, max_prob=1.0000
+No improvement for 1/10 epochs
+
+Epoch 17
+Average loss: 0.404373, BCE: 0.175302, Dice loss: 0.229071
+loss=0.7671, IoU=0.5488, Dice=0.7087, Precision=0.6456, Recall=0.7854, Coverage_MAE=0.0590, true_ratio=0.2225, pred_ratio=0.2707, max_prob=1.0000
+No improvement for 2/10 epochs
+
+Epoch 18
+Average loss: 0.393756, BCE: 0.172313, Dice loss: 0.221442
+loss=0.8651, IoU=0.5456, Dice=0.7060, Precision=0.6226, Recall=0.8153, Coverage_MAE=0.0750, true_ratio=0.2225, pred_ratio=0.2914, max_prob=1.0000
+No improvement for 3/10 epochs
+
+Epoch 19
+Average loss: 0.396768, BCE: 0.174449, Dice loss: 0.222320
+loss=0.8119, IoU=0.5473, Dice=0.7075, Precision=0.6572, Recall=0.7660, Coverage_MAE=0.0563, true_ratio=0.2225, pred_ratio=0.2594, max_prob=1.0000
+No improvement for 4/10 epochs
+
+Epoch 20
+Average loss: 0.377765, BCE: 0.165442, Dice loss: 0.212323
+loss=0.8242, IoU=0.5494, Dice=0.7092, Precision=0.6510, Recall=0.7788, Coverage_MAE=0.0612, true_ratio=0.2225, pred_ratio=0.2662, max_prob=1.0000
+No improvement for 5/10 epochs
+
+Epoch 21
+Average loss: 0.366487, BCE: 0.161309, Dice loss: 0.205178
+loss=0.7792, IoU=0.5494, Dice=0.7092, Precision=0.6704, Recall=0.7527, Coverage_MAE=0.0469, true_ratio=0.2225, pred_ratio=0.2498, max_prob=1.0000
+No improvement for 6/10 epochs
+
+Epoch 22
+Average loss: 0.361631, BCE: 0.159170, Dice loss: 0.202461
+loss=0.8132, IoU=0.5383, Dice=0.6999, Precision=0.6214, Recall=0.8010, Coverage_MAE=0.0693, true_ratio=0.2225, pred_ratio=0.2869, max_prob=1.0000
+No improvement for 7/10 epochs
+
+Epoch 23
+Average loss: 0.351572, BCE: 0.156442, Dice loss: 0.195131
+loss=0.8148, IoU=0.5538, Dice=0.7128, Precision=0.6593, Recall=0.7758, Coverage_MAE=0.0566, true_ratio=0.2225, pred_ratio=0.2618, max_prob=1.0000
+(best IoU so far: 0.5538, epoch 23)
+
+Epoch 24
+Average loss: 0.357218, BCE: 0.157820, Dice loss: 0.199398
+loss=0.8369, IoU=0.5474, Dice=0.7075, Precision=0.6514, Recall=0.7742, Coverage_MAE=0.0558, true_ratio=0.2225, pred_ratio=0.2644, max_prob=1.0000
+No improvement for 1/10 epochs
+
+Epoch 25
+Average loss: 0.340261, BCE: 0.150950, Dice loss: 0.189312
+loss=0.8036, IoU=0.5496, Dice=0.7093, Precision=0.6629, Recall=0.7627, Coverage_MAE=0.0532, true_ratio=0.2225, pred_ratio=0.2560, max_prob=1.0000
+No improvement for 2/10 epochs
+
+Epoch 26
+Average loss: 0.333587, BCE: 0.148437, Dice loss: 0.185150
+loss=0.8130, IoU=0.5504, Dice=0.7100, Precision=0.6427, Recall=0.7930, Coverage_MAE=0.0643, true_ratio=0.2225, pred_ratio=0.2746, max_prob=1.0000
+No improvement for 3/10 epochs
+
+Epoch 27
+Average loss: 0.331173, BCE: 0.147174, Dice loss: 0.183999
+loss=0.7719, IoU=0.5446, Dice=0.7051, Precision=0.6763, Recall=0.7365, Coverage_MAE=0.0433, true_ratio=0.2225, pred_ratio=0.2423, max_prob=1.0000
+No improvement for 4/10 epochs
+
+Epoch 28
+Average loss: 0.328375, BCE: 0.146413, Dice loss: 0.181962
+loss=0.7991, IoU=0.5476, Dice=0.7077, Precision=0.6492, Recall=0.7777, Coverage_MAE=0.0559, true_ratio=0.2225, pred_ratio=0.2666, max_prob=1.0000
+No improvement for 5/10 epochs
+
+Epoch 29
+Average loss: 0.318242, BCE: 0.142377, Dice loss: 0.175866
+loss=0.7952, IoU=0.5442, Dice=0.7048, Precision=0.6981, Recall=0.7117, Coverage_MAE=0.0480, true_ratio=0.2225, pred_ratio=0.2269, max_prob=1.0000
+No improvement for 6/10 epochs
+
+Epoch 30
+Average loss: 0.310250, BCE: 0.138575, Dice loss: 0.171675
+loss=0.8939, IoU=0.5474, Dice=0.7075, Precision=0.6302, Recall=0.8064, Coverage_MAE=0.0710, true_ratio=0.2225, pred_ratio=0.2847, max_prob=1.0000
+No improvement for 7/10 epochs
+
+Epoch 31
+Average loss: 0.299986, BCE: 0.134383, Dice loss: 0.165603
+loss=0.9226, IoU=0.5406, Dice=0.7018, Precision=0.6131, Recall=0.8205, Coverage_MAE=0.0810, true_ratio=0.2225, pred_ratio=0.2978, max_prob=1.0000
+No improvement for 8/10 epochs
+
+Epoch 32
+Average loss: 0.303880, BCE: 0.137517, Dice loss: 0.166362
+loss=0.8468, IoU=0.5477, Dice=0.7078, Precision=0.6332, Recall=0.8023, Coverage_MAE=0.0686, true_ratio=0.2225, pred_ratio=0.2819, max_prob=1.0000
+No improvement for 9/10 epochs
+
+Epoch 33
+Average loss: 0.299682, BCE: 0.134430, Dice loss: 0.165252
+loss=0.8275, IoU=0.5478, Dice=0.7079, Precision=0.6512, Recall=0.7754, Coverage_MAE=0.0558, true_ratio=0.2225, pred_ratio=0.2650, max_prob=1.0000
+No improvement for 10/10 epochs
+Early stopping. Best epoch: 23, best IoU: 0.5538
+
+Best model on training set:
+loss=0.3273, IoU=0.7778, Dice=0.8750, Precision=0.8942, Recall=0.8566, Coverage_MAE=0.0137, true_ratio=0.2261, pred_ratio=0.2166, max_prob=1.0000
+
+Best model on validation set D:
+loss=0.8148, IoU=0.5538, Dice=0.7128, Precision=0.6593, Recall=0.7758, Coverage_MAE=0.0566, true_ratio=0.2225, pred_ratio=0.2618, max_prob=1.0000

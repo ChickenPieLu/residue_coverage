@@ -3,17 +3,43 @@
 ## Current Model
 
 The current model is an SMP U-Net with an ImageNet-pretrained ResNet-34
-encoder. Its training code is in the repository root and uses A/B/C for
-training, D for validation and E only for the final test.
+encoder. The model definition, trained checkpoint, and single-image inference
+script are in the repository root. Training and experiment code is collected
+under `training/` and uses A/B/C for training, D for validation and E only for
+the final test.
 
 ```bash
-python main.py
-python test.py
-python visualiseE.py
+python -m training.main
+python -m training.test
+python -m training.visualiseE
 ```
+
+`training.main` saves to
+`smp_unet_resnet34_training_candidate_seed42.pth` by default and refuses to overwrite
+the existing production checkpoint. Choose another new path with
+`--output-checkpoint`.
 
 The best validation checkpoint is saved as
 `smp_unet_resnet34_imagenet_abc_bce_dice_seed42.pth`.
+
+To evaluate all three archived/current models on test location E and regenerate
+the metric tables and representative-case figures under `logs/`:
+
+```bash
+python -m training.evaluate_all_models
+```
+
+To predict the residue coverage of one image:
+
+```bash
+python predict.py /path/to/image.jpg
+```
+
+The command prints the predicted coverage percentage and saves
+`<input_name>_coverage.png` beside the input image. The saved Matplotlib figure
+contains the original image and predicted binary mask side by side. Use
+`--output result.png` to choose another output path, or `--show` to also open
+the figure window.
 
 ## Project Layout and Commands
 

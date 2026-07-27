@@ -1,0 +1,65 @@
+Three-model evaluation on residue_background/E
+Images: 144
+
+Random Forest
+  Checkpoint: /Users/chickenpielu/Projects/work/residue_coverage/legacy/classical_ml/residue_rf_model.joblib
+  Threshold: 0.60
+  Pixel IoU: 0.6458
+  Mean per-image IoU: 0.6458
+  Global Dice: 0.7848
+  Mean per-image Dice: 0.7818
+  Precision: 0.9572
+  Recall: 0.6650
+  Specificity: 0.8353
+  Pixel accuracy: 0.6911
+  True coverage: 84.70%
+  Predicted coverage: 58.85%
+  Coverage MAE: 25.86%
+  Coverage RMSE: 27.78%
+  Coverage bias: -25.86%
+  Maximum coverage error: 52.49%
+  Best case: IMG_0938_part03 (2.77%)
+  Typical case (closest to mean MAE): IMG_0944_part11 (25.79%)
+  Worst case: IMG_0946_part04 (52.49%)
+
+Mini U-Net
+  Checkpoint: /Users/chickenpielu/Projects/work/residue_coverage/legacy/unet/mini_unet_abc_bce+dice_seed42_train_generator.pth
+  Threshold: 0.50
+  Pixel IoU: 0.7780
+  Mean per-image IoU: 0.7755
+  Global Dice: 0.8751
+  Mean per-image Dice: 0.8714
+  Precision: 0.9297
+  Recall: 0.8266
+  Specificity: 0.6537
+  Pixel accuracy: 0.8002
+  True coverage: 84.70%
+  Predicted coverage: 75.31%
+  Coverage MAE: 11.73%
+  Coverage RMSE: 14.31%
+  Coverage bias: -9.39%
+  Maximum coverage error: 37.46%
+  Best case: IMG_0937_part06 (0.29%)
+  Typical case (closest to mean MAE): IMG_0938_part01 (11.48%)
+  Worst case: IMG_0946_part04 (37.46%)
+
+SMP U-Net (ResNet-34)
+  Checkpoint: /Users/chickenpielu/Projects/work/residue_coverage/smp_unet_resnet34_imagenet_abc_bce_dice_seed42.pth
+  Threshold: 0.50
+  Pixel IoU: 0.8260
+  Mean per-image IoU: 0.8241
+  Global Dice: 0.9047
+  Mean per-image Dice: 0.9021
+  Precision: 0.9051
+  Recall: 0.9043
+  Specificity: 0.4750
+  Pixel accuracy: 0.8387
+  True coverage: 84.70%
+  Predicted coverage: 84.63%
+  Coverage MAE: 7.71%
+  Coverage RMSE: 9.73%
+  Coverage bias: -0.07%
+  Maximum coverage error: 27.31%
+  Best case: IMG_0941_part09 (0.18%)
+  Typical case (closest to mean MAE): IMG_0939_part04 (7.69%)
+  Worst case: IMG_0938_part05 (27.31%)

@@ -1,0 +1,23 @@
+Three-model evaluation on residue_background/E
+Images: 144
+
+SMP U-Net (ResNet-34)
+  Checkpoint: /Users/chickenpielu/Projects/work/residue_coverage/smp_unet_resnet34_retrained_seed42.pth
+  Threshold: 0.50
+  Pixel IoU: 0.8260
+  Mean per-image IoU: 0.8241
+  Global Dice: 0.9047
+  Mean per-image Dice: 0.9021
+  Precision: 0.9051
+  Recall: 0.9043
+  Specificity: 0.4750
+  Pixel accuracy: 0.8387
+  True coverage: 84.70%
+  Predicted coverage: 84.63%
+  Coverage MAE: 7.71%
+  Coverage RMSE: 9.73%
+  Coverage bias: -0.07%
+  Maximum coverage error: 27.31%
+  Best case: IMG_0941_part09 (0.18%)
+  Typical case (closest to mean MAE): IMG_0939_part04 (7.69%)
+  Worst case: IMG_0938_part05 (27.31%)

@@ -2,9 +2,9 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-import main, utils
-from dataset import ResidueDataset
-from evaluate import evaluate
+from training import main, utils
+from training.dataset import ResidueDataset
+from training.evaluate import evaluate
 from model import make_model
 
 def test():

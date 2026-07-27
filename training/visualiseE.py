@@ -2,8 +2,8 @@ import torch
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
-import utils
-from dataset import ResidueDataset
+from training import utils
+from training.dataset import ResidueDataset
 from model import make_model
 
 

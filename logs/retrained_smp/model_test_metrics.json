@@ -1,0 +1,35 @@
+{
+  "dataset": "residue_background/E",
+  "summaries": [
+    {
+      "model_id": "smp_unet_resnet34",
+      "model": "SMP U-Net (ResNet-34)",
+      "checkpoint": "/Users/chickenpielu/Projects/work/residue_coverage/smp_unet_resnet34_retrained_seed42.pth",
+      "threshold": 0.5,
+      "device": "mps",
+      "images": 144,
+      "pixel_iou": 0.8260153003250333,
+      "mean_image_iou": 0.8241321877288741,
+      "image_iou_std": 0.06617656403874135,
+      "global_dice": 0.9047189256059371,
+      "mean_image_dice": 0.9021041619835068,
+      "image_dice_std": 0.04095141223842289,
+      "precision": 0.9051128934373444,
+      "recall": 0.904325300589496,
+      "specificity": 0.47501597205059914,
+      "pixel_accuracy": 0.8386569817860919,
+      "true_coverage": 0.8470372888776991,
+      "predicted_coverage": 0.8463002310858833,
+      "coverage_mae": 0.07705669932895237,
+      "coverage_rmse": 0.09730142126606385,
+      "coverage_bias": -0.0007370577918158637,
+      "maximum_coverage_error": 0.2731475830078125,
+      "best_case": "IMG_0941_part09",
+      "best_case_absolute_error": 0.0017547607421875,
+      "typical_case": "IMG_0939_part04",
+      "typical_case_absolute_error": 0.07686996459960938,
+      "worst_case": "IMG_0938_part05",
+      "worst_case_absolute_error": 0.2731475830078125
+    }
+  ]
+}
