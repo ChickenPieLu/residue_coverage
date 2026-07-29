@@ -1,0 +1,6 @@
+{
+  "ok": false,
+  "error": "模型资源缺失，应用无法执行预测。请重新解压完整的应用，且不要移动或删除应用内部文件。\n缺失位置：/private/tmp/ResidueCoverage-missing-model-019facfa.pth",
+  "model_load_count": 0,
+  "total_seconds": 0.01124816700030351
+}

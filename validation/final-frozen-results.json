@@ -1,0 +1,30 @@
+{
+  "ok": true,
+  "device": "cpu",
+  "model_load_count": 1,
+  "model_load_seconds": 0.39755850000074133,
+  "total_seconds": 1.852629416000127,
+  "predictions": [
+    {
+      "image": "/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0937_part01.jpg",
+      "mask_height": 512,
+      "mask_width": 512,
+      "coverage": 89.30702209472656,
+      "prediction_seconds": 0.49778608399992663
+    },
+    {
+      "image": "/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0937_part12.jpg",
+      "mask_height": 512,
+      "mask_width": 512,
+      "coverage": 80.22918701171875,
+      "prediction_seconds": 0.471737416999531
+    },
+    {
+      "image": "/Users/chickenpielu/Projects/work/residue_coverage/residue_background/E/IMG_0941_part09.jpg",
+      "mask_height": 512,
+      "mask_width": 512,
+      "coverage": 91.9281005859375,
+      "prediction_seconds": 0.48553733300013846
+    }
+  ]
+}

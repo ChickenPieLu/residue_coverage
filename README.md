@@ -387,3 +387,22 @@ smp_unet_resnet34_retrained_seed42.pth
 ```bash
 python predict.py /path/to/image.jpg
 ```
+
+## Apple Silicon macOS 便携应用
+
+便携应用的运行时代码位于 `inference.py` 和 `app.py`，不导入训练、历史模型或
+Matplotlib。应用只绑定 `127.0.0.1`，不会创建 Gradio 公共分享链接。
+
+在 Apple Silicon Mac 上使用现有 Python 3.12 虚拟环境构建：
+
+```bash
+source .venv/bin/activate
+pip install -r requirements-app.txt
+./build_macos.sh
+```
+
+构建脚本使用 `ResidueCoverage.spec` 生成 onedir/macOS app bundle，并在模型资源已纳入
+应用后由 PyInstaller执行默认 ad-hoc signing。交付产物位于 `release/`。
+
+该内部测试版没有 Developer ID 签名，也没有 Apple notarization；`codesign --verify`
+通过不代表 Gatekeeper 会接受它。其他 Mac 可能拒绝未公证应用。
