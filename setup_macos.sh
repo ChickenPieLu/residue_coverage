@@ -9,7 +9,7 @@ MODEL_PATH="$PROJECT_ROOT/$MODEL_NAME"
 MODEL_TEMP="$PROJECT_ROOT/$MODEL_NAME.part"
 CHECKSUM_FILE="$PROJECT_ROOT/MODEL_CHECKSUMS.sha256"
 MODEL_SHA256="$(awk -v name="$MODEL_NAME" '$2 == name {print $1}' "$CHECKSUM_FILE")"
-MODEL_DOWNLOAD_URL=""
+MODEL_DOWNLOAD_URL="https://github.com/ChickenPieLu/residue_coverage/releases/latest/download/smp_unet_resnet34_imagenet_abc_bce_dice_seed42.pth"
 PYTHON_COMMAND="${RESIDUE_COVERAGE_PYTHON:-python3}"
 
 if [[ -z "$MODEL_SHA256" ]]; then
@@ -18,8 +18,9 @@ if [[ -z "$MODEL_SHA256" ]]; then
 fi
 
 verify_model() {
+  local target_path="${1:-$MODEL_PATH}"
   local actual_sha256
-  actual_sha256="$(shasum -a 256 "$MODEL_PATH" | awk '{print $1}')"
+  actual_sha256="$(shasum -a 256 "$target_path" | awk '{print $1}')"
   if [[ "$actual_sha256" != "$MODEL_SHA256" ]]; then
     printf '错误：模型文件 SHA-256 校验失败。\n' >&2
     printf '期望：%s\n实际：%s\n' "$MODEL_SHA256" "$actual_sha256" >&2
@@ -67,7 +68,7 @@ python -m pip install -r "$PROJECT_ROOT/requirements-runtime.txt"
 if [[ ! -f "$MODEL_PATH" ]]; then
   if [[ -z "$MODEL_DOWNLOAD_URL" ]]; then
     printf '\n运行环境已安装，但尚未找到模型文件：\n%s\n' "$MODEL_PATH" >&2
-    printf '请从项目发布者处单独获取 %s，放到项目根目录后重新运行此脚本。\n' \
+    printf '请从项目维护者处单独获取 %s，放到项目根目录后重新运行此脚本。\n' \
       "$MODEL_NAME" >&2
     exit 2
   fi
@@ -77,8 +78,14 @@ if [[ ! -f "$MODEL_PATH" ]]; then
     printf '错误：模型下载失败，请检查网络后重试。\n' >&2
     exit 1
   fi
+  if ! verify_model "$MODEL_TEMP"; then
+    rm -f "$MODEL_TEMP"
+    printf '错误：下载的模型未通过校验，临时文件已删除。\n' >&2
+    exit 1
+  fi
   mv "$MODEL_TEMP" "$MODEL_PATH"
+else
+  verify_model "$MODEL_PATH"
 fi
 
-verify_model
 printf '\n安装完成。以后双击或运行 ./run_macos.sh 即可启动网页界面。\n'

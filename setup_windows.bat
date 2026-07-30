@@ -10,7 +10,7 @@ set "MODEL_PATH=%PROJECT_ROOT%\%MODEL_NAME%"
 set "MODEL_TEMP=%MODEL_PATH%.part"
 set "CHECKSUM_FILE=%PROJECT_ROOT%\MODEL_CHECKSUMS.sha256"
 set "MODEL_SHA256="
-set "MODEL_DOWNLOAD_URL="
+set "MODEL_DOWNLOAD_URL=https://github.com/ChickenPieLu/residue_coverage/releases/latest/download/smp_unet_resnet34_imagenet_abc_bce_dice_seed42.pth"
 set "PYTHON_COMMAND="
 
 for /f "usebackq tokens=1,2" %%A in ("%CHECKSUM_FILE%") do if "%%B"=="%MODEL_NAME%" set "MODEL_SHA256=%%A"
@@ -86,19 +86,30 @@ if not exist "%MODEL_PATH%" (
     echo 错误：模型下载失败，请检查网络后重试。
     exit /b 1
   )
+  call :verify_model "%MODEL_TEMP%"
+  if errorlevel 1 (
+    if exist "%MODEL_TEMP%" del /q "%MODEL_TEMP%"
+    echo 错误：下载的模型未通过校验，临时文件已删除。
+    exit /b 1
+  )
   move /y "%MODEL_TEMP%" "%MODEL_PATH%" >nul
+  if errorlevel 1 (
+    echo 错误：无法把已校验模型移动到项目根目录。
+    exit /b 1
+  )
+) else (
+  call :verify_model "%MODEL_PATH%"
+  if errorlevel 1 exit /b 1
 )
-
-call :verify_model
-if errorlevel 1 exit /b 1
 
 echo.
 echo 安装完成。以后双击 run_windows.bat 即可启动网页界面。
 exit /b 0
 
 :verify_model
+set "VERIFY_TARGET=%~1"
 set "ACTUAL_SHA256="
-for /f "usebackq delims=" %%H in (`powershell -NoProfile -Command "(Get-FileHash -Algorithm SHA256 -LiteralPath '%MODEL_PATH%').Hash.ToLowerInvariant()"`) do set "ACTUAL_SHA256=%%H"
+for /f "usebackq delims=" %%H in (`powershell -NoProfile -Command "(Get-FileHash -Algorithm SHA256 -LiteralPath '%VERIFY_TARGET%').Hash.ToLowerInvariant()"`) do set "ACTUAL_SHA256=%%H"
 if not defined ACTUAL_SHA256 (
   echo 错误：无法计算模型文件 SHA-256。
   exit /b 1

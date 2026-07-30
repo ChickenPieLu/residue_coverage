@@ -37,8 +37,8 @@ smp_unet_resnet34_imagenet_abc_bce_dice_seed42.pth
 1dc9d28756769791cb9b80ad33aec9ecda74c35a8ad002d9bcf34fb808505840
 ```
 
-Setup 脚本会在安装依赖后检查模型并验证 SHA-256。如果脚本提示尚无可用下载地址，请从
-项目维护者处取得模型，并把文件原样放在项目根目录；脚本不会猜测或使用未经确认的 URL。
+Setup 脚本会在安装依赖后检查模型；缺少模型时，会从 GitHub Release 下载默认模型并
+验证 SHA-256。校验失败的文件不会继续用于推理。
 
 ### macOS 最简步骤
 
@@ -75,9 +75,9 @@ Windows 脚本会在项目内创建 `.venv`，不会修改项目外的 Python �
 
 ### 模型获取与校验
 
-模型不在普通 Git 历史中。可在仓库的
-[GitHub Releases](https://github.com/ChickenPieLu/residue_coverage/releases)
-查看是否已有独立模型附件。没有真实 Release 附件时，必须人工把模型放到项目根目录。
+模型不在普通 Git 历史中，而是作为
+[GitHub Release 附件](https://github.com/ChickenPieLu/residue_coverage/releases/latest/download/smp_unet_resnet34_imagenet_abc_bce_dice_seed42.pth)
+单独分发。Setup 脚本会自动使用这个地址；也可以手动下载后放到项目根目录。
 
 macOS 可手动校验：
 
