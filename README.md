@@ -9,17 +9,104 @@ coverage = 预测为秸秆的像素数 / 图片总像素数
 当前推荐模型是以 ImageNet 预训练 ResNet-34 为编码器的 SMP U-Net。项目同时保留了
 Mini U-Net 和 Random Forest 两个历史模型，用于统一测试与效果比较。
 
+## 首选用法：本地网页界面
+
+Mac 和 Windows 用户都从 GitHub 下载源码，在自己的电脑上创建 Python 环境并运行
+Gradio 网页界面。
+
+网页只监听 `127.0.0.1`，不会创建 Gradio public share。上传的图片和预测结果只在本机
+处理，不会通过本项目上传到互联网。使用结束后请点击页面底部的“退出应用”按钮；只关闭
+浏览器标签页不会结束 Python 进程。
+
+### 系统要求
+
+- 推荐 **Python 3.12（64 位）**，macOS 和 Windows 都容易从
+  [python.org](https://www.python.org/downloads/) 安装。
+- 首次安装需要下载 PyTorch、Gradio 等依赖，下载量和磁盘占用都较大，可能需要较长时间。
+- 默认模型约 93 MB，需要与源码分开获取；不要把模型直接提交到普通 Git 历史。
+
+默认模型文件名：
+
+```text
+smp_unet_resnet34_imagenet_abc_bce_dice_seed42.pth
+```
+
+默认模型 SHA-256：
+
+```text
+1dc9d28756769791cb9b80ad33aec9ecda74c35a8ad002d9bcf34fb808505840
+```
+
+Setup 脚本会在安装依赖后检查模型并验证 SHA-256。如果脚本提示尚无可用下载地址，请从
+项目维护者处取得模型，并把文件原样放在项目根目录；脚本不会猜测或使用未经确认的 URL。
+
+### macOS 最简步骤
+
+1. 从 GitHub 下载源码并解压，或使用 `git clone`。
+2. 打开“终端”，进入项目目录。
+3. 第一次运行安装脚本，之后使用启动脚本：
+
+```bash
+chmod +x setup_macos.sh run_macos.sh
+./setup_macos.sh
+./run_macos.sh
+```
+
+安装脚本会在项目内创建 `.venv`、升级 pip、安装
+`requirements-runtime.txt`，然后检查默认模型。启动脚本验证环境和模型后，会使用系统
+默认浏览器打开 `http://127.0.0.1:<端口>`。
+
+### Windows 最简步骤
+
+1. 从 GitHub 下载源码 ZIP 并完整解压。
+2. 安装 Python 3.12（64 位）；安装时建议勾选 “Add python.exe to PATH”。
+3. 第一次双击 `setup_windows.bat`。
+4. 安装和模型校验完成后，双击 `run_windows.bat`。
+
+也可以在“命令提示符”中运行：
+
+```bat
+setup_windows.bat
+run_windows.bat
+```
+
+Windows 脚本会在项目内创建 `.venv`，不会修改项目外的 Python 环境。网页同样只运行在
+本机 `127.0.0.1`。
+
+### 模型获取与校验
+
+模型不在普通 Git 历史中。可在仓库的
+[GitHub Releases](https://github.com/ChickenPieLu/residue_coverage/releases)
+查看是否已有独立模型附件。没有真实 Release 附件时，必须人工把模型放到项目根目录。
+
+macOS 可手动校验：
+
+```bash
+shasum -a 256 smp_unet_resnet34_imagenet_abc_bce_dice_seed42.pth
+```
+
+Windows PowerShell 可手动校验：
+
+```powershell
+(Get-FileHash -Algorithm SHA256 .\smp_unet_resnet34_imagenet_abc_bce_dice_seed42.pth).Hash
+```
+
 ## 项目结构
 
 ```text
 residue_coverage/
+├── app.py
+├── inference.py
 ├── predict.py
 ├── model.py
+├── setup_macos.sh
+├── run_macos.sh
+├── setup_windows.bat
+├── run_windows.bat
+├── requirements-runtime.txt
 ├── requirements.txt
 ├── MODEL_CHECKSUMS.sha256
-├── smp_unet_resnet34_imagenet_abc_bce_dice_seed42.pth
-├── smp_unet_resnet34_retrained_seed42.pth
-├── smp_unet_resnet34_cpu_run_seed42.pth
+├── smp_unet_resnet34_imagenet_abc_bce_dice_seed42.pth  # 单独获取
 │
 ├── training/
 │   ├── main.py
@@ -62,6 +149,10 @@ residue_coverage/
 
 主要文件说明：
 
+- `app.py`：只绑定本机地址的 Gradio 网页界面。
+- `inference.py`：网页界面和命令行共用的跨平台推理代码。
+- `requirements-runtime.txt`：网页界面和模型推理所需的精简依赖。
+- `requirements.txt`：开发、训练、评估和历史模型所需的完整依赖。
 - `predict.py`：使用当前 SMP U-Net 预测单张图片。
 - `model.py`：当前 SMP U-Net 模型结构。
 - `training/`：当前模型的训练、测试和统一评估代码。
@@ -74,29 +165,14 @@ residue_coverage/
 `predict.py` 的默认模型。由于 `.pth` 文件体积较大并被 Git 忽略，复制或备份模型后建议
 使用校验文件确认内容没有变化。
 
-## 环境安装
+## 高级用法：命令行预测单张图片
 
-推荐使用项目自带的虚拟环境；如果需要重新创建：
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-以后进入项目时只需：
+普通预测优先使用上面的网页界面。`predict.py` 会生成 Matplotlib 对比图，因此还需要
+开发依赖；在已经完成 Setup 的 `.venv` 中运行：
 
 ```bash
-source .venv/bin/activate
+python -m pip install matplotlib==3.11.0
 ```
-
-验证当前模型文件是否完整：
-
-```bash
-shasum -a 256 -c MODEL_CHECKSUMS.sha256
-```
-
-## 命令行预测单张图片
 
 最简单的用法是把图片地址作为第一个参数：
 
@@ -264,6 +340,13 @@ IMG_xxxx_partxx.tif
 
 ## 重新生成三模型测试报告
 
+这一节及后续训练、评估和历史模型命令面向开发与科研工作，不属于普通用户的网页运行
+依赖。请另外安装完整依赖：
+
+```bash
+python -m pip install -r requirements.txt
+```
+
 从项目根目录运行：
 
 ```bash
@@ -370,7 +453,7 @@ Random Forest 默认使用 `0.60` 概率阈值，可通过 `--threshold` 修改�
 
 ## 当前推荐
 
-实际预测优先使用根目录的 SMP U-Net：
+实际预测优先使用本地 Gradio 网页界面和根目录的 SMP U-Net：
 
 ```text
 smp_unet_resnet34_imagenet_abc_bce_dice_seed42.pth
@@ -382,27 +465,11 @@ smp_unet_resnet34_imagenet_abc_bce_dice_seed42.pth
 smp_unet_resnet34_retrained_seed42.pth
 ```
 
-推荐直接使用：
+推荐普通用户运行：
 
 ```bash
-python predict.py /path/to/image.jpg
+./run_macos.sh
 ```
 
-## Apple Silicon macOS 便携应用
-
-便携应用的运行时代码位于 `inference.py` 和 `app.py`，不导入训练、历史模型或
-Matplotlib。应用只绑定 `127.0.0.1`，不会创建 Gradio 公共分享链接。
-
-在 Apple Silicon Mac 上使用现有 Python 3.12 虚拟环境构建：
-
-```bash
-source .venv/bin/activate
-pip install -r requirements-app.txt
-./build_macos.sh
-```
-
-构建脚本使用 `ResidueCoverage.spec` 生成 onedir/macOS app bundle，并在模型资源已纳入
-应用后由 PyInstaller执行默认 ad-hoc signing。交付产物位于 `release/`。
-
-该内部测试版没有 Developer ID 签名，也没有 Apple notarization；`codesign --verify`
-通过不代表 Gatekeeper 会接受它。其他 Mac 可能拒绝未公证应用。
+Windows 用户运行 `run_windows.bat`。需要批处理、输出对比图或指定 checkpoint 时，再
+使用上面的 `predict.py` 高级命令。

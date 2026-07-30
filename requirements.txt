@@ -1,3 +1,9 @@
+# Development and training dependencies.
+# Web UI users should install the smaller requirements-runtime.txt instead.
+#
+# This file intentionally retains evaluation, plotting, training, and historical
+# model dependencies used by the research workflow.
+
 contourpy==1.3.3
 cycler==0.12.1
 filelock==3.29.7

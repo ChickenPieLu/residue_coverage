@@ -2,23 +2,15 @@
 
 from __future__ import annotations
 
-import fcntl
 import json
 import logging
-import multiprocessing
 import os
 from pathlib import Path
 import socket
-import subprocess
 import sys
-import tempfile
 import threading
 import time
 import webbrowser
-
-# Route PyInstaller's resource-tracker/worker invocations before heavy imports.
-if __name__ == "__main__":
-    multiprocessing.freeze_support()
 
 # Configure offline/local behavior before importing Gradio or model libraries.
 os.environ["NO_PROXY"] = "localhost,127.0.0.1,::1"
@@ -27,15 +19,27 @@ os.environ.setdefault("GRADIO_ANALYTICS_ENABLED", "False")
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
-import gradio as gr
-import numpy as np
+try:
+    from filelock import FileLock, Timeout
+    import gradio as gr
+    import numpy as np
+    from platformdirs import user_data_dir
 
-from inference import (
-    InferenceError,
-    ResiduePredictor,
-    get_default_predictor,
-    model_load_count,
-)
+    from inference import (
+        InferenceError,
+        ResiduePredictor,
+        choose_device,
+        default_model_path,
+        get_default_predictor,
+        model_load_count,
+    )
+except ModuleNotFoundError as error:
+    missing_name = error.name or "未知依赖"
+    raise SystemExit(
+        "缺少运行依赖 "
+        f"“{missing_name}”。请先运行 setup_macos.sh（macOS）或 "
+        "setup_windows.bat（Windows）完成安装。"
+    ) from None
 
 
 APP_NAME = "ResidueCoverage"
@@ -52,7 +56,7 @@ def _runtime_directory() -> Path:
     override = os.environ.get("RESIDUE_COVERAGE_RUNTIME_DIR")
     if override:
         return Path(override).expanduser().resolve()
-    return Path.home() / "Library" / "Application Support" / APP_NAME
+    return Path(user_data_dir(APP_NAME, appauthor=False))
 
 
 def _configure_logging() -> None:
@@ -73,35 +77,39 @@ def _configure_logging() -> None:
 
 
 class InstanceLock:
-    """Keep one server per macOS user and reopen its page on repeated launch."""
+    """Keep one local server per user on macOS and Windows."""
 
     def __init__(self, runtime_directory: Path) -> None:
         self.runtime_directory = runtime_directory
         self.lock_path = runtime_directory / "instance.lock"
         self.state_path = runtime_directory / "server.json"
-        self._handle = None
+        self._lock = FileLock(str(self.lock_path))
 
     def acquire(self) -> bool:
-        self.runtime_directory.mkdir(parents=True, exist_ok=True)
-        self._handle = self.lock_path.open("a+", encoding="utf-8")
         try:
-            fcntl.flock(self._handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            self._handle.close()
-            self._handle = None
+            self.runtime_directory.mkdir(parents=True, exist_ok=True)
+            self._lock.acquire(timeout=0)
+        except Timeout:
             return False
+        except OSError as error:
+            raise RuntimeError(
+                f"无法创建应用运行目录：{self.runtime_directory}。{error}"
+            ) from error
         return True
 
     def write_state(self, url: str) -> None:
         temporary = self.state_path.with_suffix(".tmp")
-        temporary.write_text(
-            json.dumps(
-                {"url": url, "pid": os.getpid(), "started_at": time.time()},
-                ensure_ascii=False,
-            ),
-            encoding="utf-8",
-        )
-        temporary.replace(self.state_path)
+        try:
+            temporary.write_text(
+                json.dumps(
+                    {"url": url, "pid": os.getpid(), "started_at": time.time()},
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            temporary.replace(self.state_path)
+        except OSError as error:
+            _LOGGER.warning("无法写入本地服务状态：%s", error)
 
     def existing_url(self) -> str | None:
         try:
@@ -112,34 +120,15 @@ class InstanceLock:
         return url if isinstance(url, str) and url.startswith("http://127.0.0.1:") else None
 
 
-class MacOSDefaultBrowser(webbrowser.BaseBrowser):
-    """Open a URL through LaunchServices, honoring the macOS default browser."""
-
-    def open(self, url: str, new: int = 0, autoraise: bool = True) -> bool:
-        del new, autoraise
-        try:
-            subprocess.run(
-                ["/usr/bin/open", url],
-                check=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                timeout=10,
-            )
-        except (OSError, subprocess.SubprocessError):
-            _LOGGER.exception("无法通过 macOS 默认浏览器打开 %s", url)
-            return False
-        _LOGGER.info("已请求 macOS 默认浏览器打开 %s", url)
-        return True
-
-
-def _register_macos_default_browser() -> None:
-    if sys.platform == "darwin":
-        webbrowser.register(
-            "residue-coverage-macos",
-            None,
-            MacOSDefaultBrowser(),
-            preferred=True,
-        )
+def _open_default_browser(url: str) -> None:
+    """Open the loopback URL with the operating system's default browser."""
+    try:
+        opened = webbrowser.open(url, new=2, autoraise=True)
+    except webbrowser.Error as error:
+        _LOGGER.warning("无法自动打开默认浏览器：%s", error)
+        opened = False
+    if not opened:
+        print(f"浏览器未能自动打开，请手动访问：{url}", flush=True)
 
 
 def _select_loopback_port() -> int:
@@ -251,7 +240,7 @@ def build_demo(
         fn=run_prediction,
         inputs=[image_input, threshold_input],
         outputs=[mask_output, coverage_output, status_output],
-        title="秸秆覆盖率预测（内部测试版）",
+        title="秸秆覆盖率预测",
         description=(
             "上传一张垂直于农田拍摄的图片，点击“开始预测”查看二值 mask 和"
             f"秸秆覆盖率。当前运行设备：**{device_text}**。图片只在本机处理，"
@@ -297,76 +286,48 @@ def build_demo(
     return demo
 
 
-def _write_self_test_output(output_path: Path, payload: dict) -> None:
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = output_path.with_suffix(output_path.suffix + ".tmp")
-    temporary.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    temporary.replace(output_path)
-
-
-def _run_self_test(arguments: list[str]) -> int:
-    if len(arguments) < 2:
-        return 2
-    output_path = Path(arguments[0]).expanduser().resolve()
-    image_paths = [Path(value).expanduser().resolve() for value in arguments[1:]]
-    started = time.perf_counter()
+def _run_preflight() -> int:
+    """Check imports, paths, device selection, and UI construction without loading a model."""
+    runtime_directory = _runtime_directory()
     try:
-        predictor = get_default_predictor()
-        loaded_at = time.perf_counter()
-        predictions = []
-        for image_path in image_paths:
-            prediction_started = time.perf_counter()
-            result = predictor.predict(image_path, 0.5)
-            predictions.append(
-                {
-                    "image": str(image_path),
-                    "mask_height": int(result.mask.shape[0]),
-                    "mask_width": int(result.mask.shape[1]),
-                    "coverage": result.coverage,
-                    "prediction_seconds": time.perf_counter() - prediction_started,
-                }
-            )
-        payload = {
-            "ok": True,
-            "device": str(predictor.device),
-            "model_load_count": model_load_count(),
-            "model_load_seconds": loaded_at - started,
-            "total_seconds": time.perf_counter() - started,
-            "predictions": predictions,
-        }
-        _write_self_test_output(output_path, payload)
-        return 0
-    except BaseException as error:
-        message = str(error) if isinstance(error, InferenceError) else f"自检失败：{error}"
-        _write_self_test_output(
-            output_path,
-            {
-                "ok": False,
-                "error": message,
-                "model_load_count": model_load_count(),
-                "total_seconds": time.perf_counter() - started,
-            },
-        )
+        runtime_directory.mkdir(parents=True, exist_ok=True)
+    except OSError as error:
+        print(f"启动前检查失败：无法使用运行目录 {runtime_directory}。{error}")
         return 1
+    model_path = default_model_path()
+    device = choose_device("auto")
+    model_message = (
+        f"已找到模型：{model_path}"
+        if model_path.is_file()
+        else f"尚未找到模型（界面仍可启动）：{model_path}"
+    )
+    build_demo(None, "启动前检查模式：未加载模型。")
+    print("启动前检查通过：运行依赖和 Gradio 界面可以初始化。")
+    print(f"自动设备选择：{device}")
+    print(f"运行目录：{runtime_directory}")
+    print(model_message)
+    return 0
 
 
 def main() -> None:
     global _INSTANCE_LOCK
 
     _configure_logging()
-    if len(sys.argv) >= 2 and sys.argv[1] == "--self-test":
-        raise SystemExit(_run_self_test(sys.argv[2:]))
+    if len(sys.argv) >= 2 and sys.argv[1] == "--preflight":
+        raise SystemExit(_run_preflight())
 
-    _register_macos_default_browser()
     runtime_directory = _runtime_directory()
     _INSTANCE_LOCK = InstanceLock(runtime_directory)
-    if not _INSTANCE_LOCK.acquire():
+    try:
+        acquired = _INSTANCE_LOCK.acquire()
+    except RuntimeError as error:
+        raise SystemExit(str(error)) from None
+    if not acquired:
         existing_url = _INSTANCE_LOCK.existing_url()
         if existing_url:
-            webbrowser.open(existing_url)
+            _open_default_browser(existing_url)
+        else:
+            print("ResidueCoverage 已在启动，请稍候再打开浏览器页面。")
         return
 
     startup_started = time.perf_counter()
@@ -382,7 +343,7 @@ def main() -> None:
         )
     except InferenceError as error:
         startup_error = str(error)
-        _LOGGER.exception("模型加载失败")
+        _LOGGER.warning("模型加载失败：%s", error)
 
     try:
         port = _select_loopback_port()
@@ -394,16 +355,26 @@ def main() -> None:
     _INSTANCE_LOCK.write_state(url)
     demo = build_demo(predictor, startup_error)
     _LOGGER.info("启动本地界面 url=%s", url)
-    demo.launch(
-        inbrowser=os.environ.get("RESIDUE_COVERAGE_DISABLE_BROWSER") != "1",
-        share=False,
-        server_name=SERVER_NAME,
-        server_port=port,
-        show_error=True,
-        quiet=True,
-        enable_monitoring=False,
-        footer_links=[],
-    )
+    print(f"ResidueCoverage 正在本机运行：{url}", flush=True)
+    try:
+        demo.launch(
+            inbrowser=os.environ.get("RESIDUE_COVERAGE_DISABLE_BROWSER") != "1",
+            share=False,
+            server_name=SERVER_NAME,
+            server_port=port,
+            show_error=False,
+            quiet=True,
+            enable_monitoring=False,
+            footer_links=[],
+        )
+    except KeyboardInterrupt:
+        print("\nResidueCoverage 已停止。")
+    except Exception as error:
+        _LOGGER.exception("本地界面启动失败")
+        raise SystemExit(
+            f"本地网页界面启动失败：{error}\n"
+            f"请确认端口 {PORT_START}–{PORT_END} 未被安全软件阻止。"
+        ) from None
 
 
 if __name__ == "__main__":

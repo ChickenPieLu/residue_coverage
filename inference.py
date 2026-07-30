@@ -1,4 +1,4 @@
-"""Portable runtime inference for the crop-residue SMP U-Net."""
+"""Cross-platform runtime inference for the crop-residue SMP U-Net."""
 
 from __future__ import annotations
 
@@ -7,7 +7,6 @@ from functools import lru_cache
 import hashlib
 import os
 from pathlib import Path
-import sys
 from typing import Final
 
 import numpy as np
@@ -42,35 +41,11 @@ class PredictionResult:
     image_size: tuple[int, int]
 
 
-def _frozen_resource_roots() -> list[Path]:
-    roots: list[Path] = []
-    meipass = getattr(sys, "_MEIPASS", None)
-    if meipass:
-        roots.append(Path(meipass))
-
-    # PyInstaller macOS app layout: Contents/MacOS/<executable>.
-    executable = Path(sys.executable).resolve()
-    if executable.parent.name == "MacOS":
-        roots.append(executable.parent.parent / "Resources")
-
-    return roots
-
-
 def default_model_path() -> Path:
     """Resolve the model without relying on the process working directory."""
     override = os.environ.get("RESIDUE_COVERAGE_MODEL_PATH")
     if override:
         return Path(override).expanduser().resolve()
-
-    if getattr(sys, "frozen", False):
-        for root in _frozen_resource_roots():
-            candidate = root / "models" / MODEL_FILENAME
-            if candidate.is_file():
-                return candidate
-        roots = _frozen_resource_roots()
-        if roots:
-            return roots[0] / "models" / MODEL_FILENAME
-
     return PROJECT_ROOT / MODEL_FILENAME
 
 
@@ -78,14 +53,19 @@ DEFAULT_CHECKPOINT = default_model_path()
 
 
 def choose_device(requested: str = "auto") -> torch.device:
-    """Prefer Apple MPS for automatic selection, otherwise use CPU."""
+    """Choose CUDA, then Apple MPS, then CPU for automatic selection."""
+    mps_backend = getattr(torch.backends, "mps", None)
+    mps_available = bool(mps_backend and mps_backend.is_available())
+
     if requested == "auto":
-        if torch.backends.mps.is_available():
+        if torch.cuda.is_available():
+            return torch.device("cuda")
+        if mps_available:
             return torch.device("mps")
         return torch.device("cpu")
 
-    if requested == "mps" and not torch.backends.mps.is_available():
-        raise InferenceError("当前 Mac 无法使用 MPS，改用 --device cpu 或使用自动选择。")
+    if requested == "mps" and not mps_available:
+        raise InferenceError("当前环境无法使用 MPS，请改用 --device cpu 或自动选择。")
     if requested == "cuda":
         if not torch.cuda.is_available():
             raise InferenceError("当前环境无法使用 CUDA。")
@@ -166,15 +146,18 @@ def load_model(
     checkpoint_path = Path(checkpoint)
     if not checkpoint_path.is_file():
         raise InferenceError(
-            "模型资源缺失，应用无法执行预测。请重新解压完整的应用，且不要移动或"
-            f"删除应用内部文件。\n缺失位置：{checkpoint_path}"
+            "未找到模型文件，暂时无法执行预测。\n"
+            f"请将默认模型放到项目根目录：{MODEL_FILENAME}\n"
+            "然后重新运行启动脚本。也可以通过 RESIDUE_COVERAGE_MODEL_PATH "
+            f"指定模型位置。\n当前查找位置：{checkpoint_path}"
         )
 
     if expected_sha256:
         actual_sha256 = sha256_file(checkpoint_path)
         if actual_sha256.lower() != expected_sha256.lower():
             raise InferenceError(
-                "模型文件校验失败，文件可能已损坏。请重新解压完整的应用。\n"
+                "模型文件 SHA-256 校验失败，文件可能不完整或已损坏。"
+                "请重新下载模型后再运行。\n"
                 f"期望 SHA-256：{expected_sha256}\n实际 SHA-256：{actual_sha256}"
             )
 
@@ -199,7 +182,10 @@ def load_model(
             raise InferenceError(
                 "加载模型时内存不足，请关闭其他应用后重新启动 ResidueCoverage。"
             ) from error
-        raise InferenceError(f"模型加载失败：{error}") from error
+        raise InferenceError(
+            "模型加载失败。请确认使用 Python 3.12 和 requirements-runtime.txt "
+            f"中的依赖版本，并确认模型文件完整。\n技术信息：{error}"
+        ) from error
 
     _MODEL_LOAD_COUNT += 1
     return model

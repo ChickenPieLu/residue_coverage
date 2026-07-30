@@ -1,0 +1,15 @@
+# Runtime-only dependencies for the local Gradio UI and SMP U-Net inference.
+# Recommended Python: 3.12 (macOS and Windows).
+#
+# torch 2.13.0 and torchvision 0.28.0 are an exact compatible pair:
+# torchvision 0.28.0 declares torch==2.13.0.
+
+filelock==3.29.7
+gradio==6.20.0
+numpy==2.5.1
+pillow==12.3.0
+platformdirs==4.4.0
+segmentation-models-pytorch==0.5.0
+timm==1.0.28
+torch==2.13.0
+torchvision==0.28.0
